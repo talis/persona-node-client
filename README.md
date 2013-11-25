@@ -4,8 +4,18 @@ Node Client for Persona, repsonsible for retrieving, generating, caching and val
 Install the module with: `npm install persona_client`
 
 ```javascript
-var persona_client = require('persona_client');
-persona_client.awesome(); // "awesome"
+var persona = require('persona_client');
+var personaClient = persona.createClient({
+    persona_host:"localhost",
+    persona_port:443,
+    persona_scheme:"https",
+    persona_oauth_route:"/oauth/tokens",
+    redis_host:"localhost",
+    redis_port:6379,
+    redis_db:0,
+    enable_debug: true,
+    logger: AppLogger
+});
 ```
 
 ## Documentation

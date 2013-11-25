@@ -7,6 +7,7 @@ var ERROR = "error";
 /**
  * Constructor you must pass in a config object with the following properties set:
  *
+ * mandatory params
  * config.persona_host = "users.talis.com";
  * config.persona_port = 443;
  * config.persona_scheme = "https";
@@ -14,6 +15,10 @@ var ERROR = "error";
  * config.redis_host
  * config.redis_port
  * config.redis_db
+ *
+ * optional params:
+ * config.enable_debug : true|false
+ * config.logger: <pass in a logger that has debug() and error() functions>
  *
  * This library stores no default configuration of its own. It relies on the application/service
  * it is embedded in to supply this information.
