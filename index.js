@@ -54,6 +54,14 @@ var PersonaClient = function(config) {
         throw new Error("You must specify the Redis db");
     }
 
+    // connect to redis and switch to the configured db
+    var redis = require('redis');
+    this.redisClient = redis.createClient(this.config.redis_port, this.config.redis_host);
+    this.redisClient.select(this.config.redis_db);
+
+    // need to instantiate this based on the configured scheme
+    this.http = require(this.config.persona_scheme);
+
     this.debug("Persona Client Created");
 };
 
@@ -68,34 +76,34 @@ PersonaClient.prototype.validateToken = function(req,res,next){
         throw "OAuth validation failed for "+token;
     }
 
-    redisClient.get("access_token:"+token,function(err,reply) {
+    this.redisClient.get("access_token:"+token,function(err,reply) {
         if (reply=="OK") {
-            this.debug("Token "+token+" verified by cache");
+            _this.debug("Token "+token+" verified by cache");
             next();
         } else {
             var options = {
-                hostname: config.oauth.host,
-                port: config.oauth.port,
-                path: config.oauth.route+token,
+                hostname: _this.config.persona_host,
+                port: _this.config.persona_port,
+                path: _this.config.persona_oauth_route+token,
                 method: 'HEAD'
             };
-            http.request(options,function(oauthResp) {
+            _this.http.request(options,function(oauthResp) {
                 if (oauthResp.statusCode==204)
                 {
                     // put this key in redis with an expire
-                    redisClient.multi().set("access_token:"+token,'OK').expire("access_token:"+token,60).exec(function(err,results){ this.debug("cache: "+JSON.stringify(err)+JSON.stringify(results))});
-                    this.debug("Verification passed for token "+token+", cached for 60s");
+                    _this.redisClient.multi().set("access_token:"+token,'OK').expire("access_token:"+token,60).exec(function(err,results){ _this.debug("cache: "+JSON.stringify(err)+JSON.stringify(results))});
+                    _this.debug("Verification passed for token "+token+", cached for 60s");
                     next();
                 }
                 else
                 {
-                    this.debug("Verification failed for token "+token+" with status code "+oauthResp.statusCode);
+                    _this.debug("Verification failed for token "+token+" with status code "+oauthResp.statusCode);
                     res.status(401);
                     res.set("Connection","close");
                     res.json({"error":"invalid_token","error_description":"The token is invalid or has expired"});
                 }
             }).on("error",function(e) {
-                    this.error("OAuth::validateToken problem: "+ e.message);
+                    _this.error("OAuth::validateToken problem: "+ e.message);
                     res.status(500);
                     res.set("Connection","close");
                     res.json({"error":"unexpected_error","error_description":e.message});
@@ -105,42 +113,42 @@ PersonaClient.prototype.validateToken = function(req,res,next){
 
 };
 
-PersonaClient.prototype.generateToken = function(callback){
-    // todo: this is really inefficient requesting a new token each time. Cache in redis until expires.
-    this.debug("Generating token for use in primitives on behalf of anon client");
-
-    var b64cred = new Buffer(config.oauth.anonClient.id+":"+config.oauth.anonClient.secret).toString('base64');
-    var options = {
-        hostname: config.oauth.host,
-        port: config.oauth.port,
-        path: config.oauth.route,
-        method: 'POST',
-        headers: {
-            Authorization: "Basic "+b64cred,
-            'Content-Type': "application/json"
-        }
-    };
-    var personaReq = http.request(options,function(personaResp) {
-        var str = "";
-        personaResp.on('data', function(chunk){
-            str += chunk;
-        });
-        personaResp.on('end', function(){
-            // todo impl
-            var resp = JSON.parse(str);
-            if (resp.access_token) {
-                callback(null,resp.access_token);
-            } else {
-                callback("access_token missing from response", null);
-            }
-        });
-    });
-    personaReq.on("clientError",function() {
-        callback(err,null);
-    });
-    personaReq.write(JSON.stringify({grant_type:"client_credentials"}));
-    personaReq.end();
-};
+//PersonaClient.prototype.generateToken = function(callback){
+//    // todo: this is really inefficient requesting a new token each time. Cache in redis until expires.
+//    this.debug("Generating token for use in primitives on behalf of anon client");
+//
+//    var b64cred = new Buffer(config.oauth.anonClient.id+":"+config.oauth.anonClient.secret).toString('base64');
+//    var options = {
+//        hostname: this.config.persona_host,
+//        port: this.config.persona_port,
+//        path: this.config.persona_oauth_route,
+//        method: 'POST',
+//        headers: {
+//            Authorization: "Basic "+b64cred,
+//            'Content-Type': "application/json"
+//        }
+//    };
+//    var personaReq = http.request(options,function(personaResp) {
+//        var str = "";
+//        personaResp.on('data', function(chunk){
+//            str += chunk;
+//        });
+//        personaResp.on('end', function(){
+//            // todo impl
+//            var resp = JSON.parse(str);
+//            if (resp.access_token) {
+//                callback(null,resp.access_token);
+//            } else {
+//                callback("access_token missing from response", null);
+//            }
+//        });
+//    });
+//    personaReq.on("clientError",function() {
+//        callback(err,null);
+//    });
+//    personaReq.write(JSON.stringify({grant_type:"client_credentials"}));
+//    personaReq.end();
+//};
 
 
 PersonaClient.prototype.getToken = function (req) {
