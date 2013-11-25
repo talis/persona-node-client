@@ -175,14 +175,14 @@ PersonaClient.prototype.log = function(severity, message) {
 
     if(this.config.logger){
         if(severity == DEBUG){
-            this.config.logger.debug(message);
+            this.config.logger.debug("[persona_client] " + message);
         } else if ( severity == ERROR ){
-            this.config.logger.error(message);
+            this.config.logger.error("[persona_client] " + message);
         } else {
-            console.log(severity +": "+ message);
+            console.log(severity +": [persona_client] " + message);
         }
     } else {
-        console.log(severity + ": " + message);
+        console.log(severity +": [persona_client] " + message);
     }
 }
 PersonaClient.prototype.debug = function(message) {
