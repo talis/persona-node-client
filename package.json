@@ -1,0 +1,27 @@
+{
+  "name": "persona_client",
+  "version": "0.0.1",
+  "main": "lib/persona-client.js",
+  "description": "Node Client for Persona, repsonsible for retrieving, generating, caching and validating OAuth Tokens.",
+  "homepage": "http://www.talis.com",
+  "bugs": "https://github.com/talis/persona-node-client/issues",
+  "author": {
+    "name": "Nadeem Shabir",
+    "email": "ns@talis.com",
+    "url": "http://www.talis.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/talis/persona-node-client"
+  },
+  "licenses": [
+    {
+      "type": "MIT"
+    }
+  ],
+  "devDependencies": {
+    "grunt-contrib-jshint": "~0.6.0",
+    "grunt-contrib-nodeunit": "~0.2.0",
+    "grunt-contrib-watch": "~0.5.0"
+  }
+}
