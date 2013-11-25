@@ -1,6 +1,6 @@
 'use strict';
 
-var persona_client = require('../lib/persona-client.js');
+var persona_client = require('../index.js');
 
 /*
   ======== A Handy Little Nodeunit Reference ========
