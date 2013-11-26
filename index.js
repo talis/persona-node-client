@@ -8,7 +8,7 @@ var ERROR = "error";
  * Constructor you must pass in a config object with the following properties set:
  *
  * mandatory params
- * config.persona_host = "users.talis.com";
+ * config.persona_host = "localhost";
  * config.persona_port = 443;
  * config.persona_scheme = "https";
  * config.persona_oauth_route = "/oauth/tokens/";
