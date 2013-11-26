@@ -113,44 +113,6 @@ PersonaClient.prototype.validateToken = function(req,res,next){
 
 };
 
-//PersonaClient.prototype.generateToken = function(callback){
-//    // todo: this is really inefficient requesting a new token each time. Cache in redis until expires.
-//    this.debug("Generating token for use in primitives on behalf of anon client");
-//
-//    var b64cred = new Buffer(config.oauth.anonClient.id+":"+config.oauth.anonClient.secret).toString('base64');
-//    var options = {
-//        hostname: this.config.persona_host,
-//        port: this.config.persona_port,
-//        path: this.config.persona_oauth_route,
-//        method: 'POST',
-//        headers: {
-//            Authorization: "Basic "+b64cred,
-//            'Content-Type': "application/json"
-//        }
-//    };
-//    var personaReq = http.request(options,function(personaResp) {
-//        var str = "";
-//        personaResp.on('data', function(chunk){
-//            str += chunk;
-//        });
-//        personaResp.on('end', function(){
-//            // todo impl
-//            var resp = JSON.parse(str);
-//            if (resp.access_token) {
-//                callback(null,resp.access_token);
-//            } else {
-//                callback("access_token missing from response", null);
-//            }
-//        });
-//    });
-//    personaReq.on("clientError",function() {
-//        callback(err,null);
-//    });
-//    personaReq.write(JSON.stringify({grant_type:"client_credentials"}));
-//    personaReq.end();
-//};
-
-
 PersonaClient.prototype.getToken = function (req) {
     if (req.header("Authorization"))
     {
