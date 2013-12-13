@@ -68,7 +68,6 @@ var PersonaClient = function(config) {
 PersonaClient.prototype.validateToken = function(req,res,next){
     var token = this.getToken(req),
         _this = this;
-    this.debug("Validating token: "+token);
 
     if (token == null) {
         res.status(401);
@@ -81,10 +80,12 @@ PersonaClient.prototype.validateToken = function(req,res,next){
         token += "@" + req.param("scope");
     }
 
+    this.debug("Validating token: "+token);
+
     this.redisClient.get("access_token:"+token,function(err,reply) {
         if (reply=="OK") {
             _this.debug("Token "+token+" verified by cache");
-            next();
+            next(null, "verified_by_cache");
         } else {
 
             // wasnt already cached but we need the unscoped token to build http request
@@ -102,13 +103,15 @@ PersonaClient.prototype.validateToken = function(req,res,next){
                 path: requestPath,
                 method: 'HEAD'
             };
+
+            _this.debug(JSON.stringify(options));
             _this.http.request(options,function(oauthResp) {
                 if (oauthResp.statusCode==204)
                 {
                     // put this key in redis with an expire
                     _this.redisClient.multi().set("access_token:"+token,'OK').expire("access_token:"+token,60).exec(function(err,results){ _this.debug("cache: "+JSON.stringify(err)+JSON.stringify(results))});
                     _this.debug("Verification passed for token "+token+", cached for 60s");
-                    next();
+                    next(null, "verified_by_persona");
                 }
                 else
                 {
