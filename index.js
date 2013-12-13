@@ -76,15 +76,30 @@ PersonaClient.prototype.validateToken = function(req,res,next){
         throw "OAuth validation failed for "+token;
     }
 
+    // if we were given a scope then append the scope to the token
+    if(req.param("scope")) {
+        token += "@" + req.param("scope");
+    }
+
     this.redisClient.get("access_token:"+token,function(err,reply) {
         if (reply=="OK") {
             _this.debug("Token "+token+" verified by cache");
             next();
         } else {
+
+            // wasnt already cached but we need the unscoped token to build http request
+            var parts = token.split("@");
+            var _token=parts[0];
+
+            var requestPath = _this.config.persona_oauth_route+_token;
+            if(req.param("scope")){
+                requestPath += "?scope=" + req.param("scope");
+            }
+
             var options = {
                 hostname: _this.config.persona_host,
                 port: _this.config.persona_port,
-                path: _this.config.persona_oauth_route+token,
+                path: requestPath,
                 method: 'HEAD'
             };
             _this.http.request(options,function(oauthResp) {
