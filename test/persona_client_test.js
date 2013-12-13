@@ -17,7 +17,7 @@ describe("Persona Client Test Suite", function(){
         });
         it("should throw error if config.persona_port is not supplied", function(done){
             var personaClient = function(){
-                return persona.createClient({persona_host:"localhost"});
+                return persona.createClient({persona_host:"persona"});
             };
             personaClient.should.throw("You must specify the Persona server port");
             done();
@@ -25,8 +25,8 @@ describe("Persona Client Test Suite", function(){
         it("should throw error if config.persona_scheme is not supplied", function(done){
             var personaClient = function(){
                 return persona.createClient({
-                    persona_host:"localhost",
-                    persona_port:443
+                    persona_host:"persona",
+                    persona_port:80
                 });
             };
             personaClient.should.throw("You must specify the Persona server scheme (http/https)");
@@ -35,9 +35,9 @@ describe("Persona Client Test Suite", function(){
         it("should throw error if config.persona_oauth_route is not supplied", function(done){
             var personaClient = function(){
                 return persona.createClient({
-                    persona_host:"localhost",
-                    persona_port:443,
-                    persona_scheme:"https"
+                    persona_host:"persona",
+                    persona_port:80,
+                    persona_scheme:"http"
                 });
             };
             personaClient.should.throw("You must specify the Persona oauth route");
@@ -46,9 +46,9 @@ describe("Persona Client Test Suite", function(){
         it("should throw error if config.redis_host is not supplied", function(done){
             var personaClient = function(){
                 return persona.createClient({
-                    persona_host:"localhost",
-                    persona_port:443,
-                    persona_scheme:"https",
+                    persona_host:"persona",
+                    persona_port:80,
+                    persona_scheme:"http",
                     persona_oauth_route:"/oauth/tokens"
                 });
             };
@@ -58,11 +58,11 @@ describe("Persona Client Test Suite", function(){
         it("should throw error if config.redis_port is not supplied", function(done){
             var personaClient = function(){
                 return persona.createClient({
-                    persona_host:"localhost",
-                    persona_port:443,
-                    persona_scheme:"https",
+                    persona_host:"persona",
+                    persona_port:80,
+                    persona_scheme:"http",
                     persona_oauth_route:"/oauth/tokens",
-                    redis_host:"localhost"
+                    redis_host:"persona"
                 });
             };
             personaClient.should.throw("You must specify the Redis port");
@@ -71,11 +71,11 @@ describe("Persona Client Test Suite", function(){
         it("should throw error if config.redis_db is not supplied", function(done){
             var personaClient = function(){
                 return persona.createClient({
-                    persona_host:"localhost",
-                    persona_port:443,
-                    persona_scheme:"https",
+                    persona_host:"persona",
+                    persona_port:80,
+                    persona_scheme:"http",
                     persona_oauth_route:"/oauth/tokens",
-                    redis_host:"localhost",
+                    redis_host:"persona",
                     redis_port:6379
                 });
             };
@@ -85,11 +85,11 @@ describe("Persona Client Test Suite", function(){
         it("should NOT throw any error if all config params are defined", function(done){
             var personaClient = function(){
                 return persona.createClient({
-                    persona_host:"localhost",
-                    persona_port:443,
-                    persona_scheme:"https",
+                    persona_host:"persona",
+                    persona_port:80,
+                    persona_scheme:"http",
                     persona_oauth_route:"/oauth/tokens",
-                    redis_host:"localhost",
+                    redis_host:"persona",
                     redis_port:6379,
                     redis_db:0
                 });
