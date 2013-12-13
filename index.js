@@ -75,24 +75,21 @@ PersonaClient.prototype.validateToken = function(req,res,next){
         throw "OAuth validation failed for "+token;
     }
 
-    // if we were given a scope then append the scope to the token
+    // if we were given a scope then append the scope to the token to create a cachekey
+    var cacheKey = token;
     if(req.param("scope")) {
-        token += "@" + req.param("scope");
+        cacheKey += "@" + req.param("scope");
     }
 
-    this.debug("Validating token: "+token);
+    this.debug("Validating token: "+cacheKey);
 
-    this.redisClient.get("access_token:"+token,function(err,reply) {
+    this.redisClient.get("access_token:"+cacheKey,function(err,reply) {
         if (reply=="OK") {
-            _this.debug("Token "+token+" verified by cache");
+            _this.debug("Token "+cacheKey+" verified by cache");
             next(null, "verified_by_cache");
         } else {
 
-            // wasnt already cached but we need the unscoped token to build http request
-            var parts = token.split("@");
-            var _token=parts[0];
-
-            var requestPath = _this.config.persona_oauth_route+_token;
+            var requestPath = _this.config.persona_oauth_route+token;
             if(req.param("scope")){
                 requestPath += "?scope=" + req.param("scope");
             }
@@ -109,13 +106,13 @@ PersonaClient.prototype.validateToken = function(req,res,next){
                 if (oauthResp.statusCode==204)
                 {
                     // put this key in redis with an expire
-                    _this.redisClient.multi().set("access_token:"+token,'OK').expire("access_token:"+token,60).exec(function(err,results){ _this.debug("cache: "+JSON.stringify(err)+JSON.stringify(results))});
-                    _this.debug("Verification passed for token "+token+", cached for 60s");
+                    _this.redisClient.multi().set("access_token:"+cacheKey,'OK').expire("access_token:"+cacheKey,60).exec(function(err,results){ _this.debug("cache: "+JSON.stringify(err)+JSON.stringify(results))});
+                    _this.debug("Verification passed for token "+cacheKey+", cached for 60s");
                     next(null, "verified_by_persona");
                 }
                 else
                 {
-                    _this.debug("Verification failed for token "+token+" with status code "+oauthResp.statusCode);
+                    _this.debug("Verification failed for token "+cacheKey+" with status code "+oauthResp.statusCode);
                     res.status(401);
                     res.set("Connection","close");
                     res.json({"error":"invalid_token","error_description":"The token is invalid or has expired"});
