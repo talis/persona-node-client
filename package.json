@@ -1,6 +1,6 @@
 {
   "name": "persona_client",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "private": true,
   "main": "./index.js",
   "description": "Node Client for Persona, repsonsible for retrieving, generating, caching and validating OAuth Tokens.",
@@ -29,6 +29,7 @@
     "mocha": "~1.14.0"
   },
   "dependencies": {
-    "redis": "~0.9.1"
+    "redis": "~0.9.1",
+    "async": "~0.2.9"
   }
 }
