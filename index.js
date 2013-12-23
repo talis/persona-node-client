@@ -31,26 +31,26 @@ var PersonaClient = function(config) {
 
     //TODO: find a less verbose way of doing this
 
-    if(this.config.persona_host == undefined){
+    if(this.config.persona_host === undefined){
         throw new Error("You must specify the Persona server host");
     }
-    if(this.config.persona_port == undefined){
+    if(this.config.persona_port === undefined){
         throw new Error("You must specify the Persona server port");
     }
-    if(this.config.persona_scheme == undefined){
+    if(this.config.persona_scheme === undefined){
         throw new Error("You must specify the Persona server scheme (http/https)");
     }
-    if(this.config.persona_oauth_route == undefined){
+    if(this.config.persona_oauth_route === undefined){
         throw new Error("You must specify the Persona oauth route");
     }
 
-    if(this.config.redis_host == undefined){
+    if(this.config.redis_host === undefined){
         throw new Error("You must specify the Redis host to use as a cache");
     }
-    if(this.config.redis_port == undefined){
+    if(this.config.redis_port === undefined){
         throw new Error("You must specify the Redis port");
     }
-    if(this.config.redis_db == undefined){
+    if(this.config.redis_db === undefined){
         throw new Error("You must specify the Redis db");
     }
 
@@ -84,7 +84,7 @@ PersonaClient.prototype.validateToken = function(req,res,next){
     this.debug("Validating token: "+cacheKey);
 
     this.redisClient.get("access_token:"+cacheKey,function(err,reply) {
-        if (reply=="OK") {
+        if (reply==="OK") {
             _this.debug("Token "+cacheKey+" verified by cache");
             next(null, "verified_by_cache");
         } else {
@@ -103,10 +103,10 @@ PersonaClient.prototype.validateToken = function(req,res,next){
 
             _this.debug(JSON.stringify(options));
             _this.http.request(options,function(oauthResp) {
-                if (oauthResp.statusCode==204)
+                if (oauthResp.statusCode===204)
                 {
                     // put this key in redis with an expire
-                    _this.redisClient.multi().set("access_token:"+cacheKey,'OK').expire("access_token:"+cacheKey,60).exec(function(err,results){ _this.debug("cache: "+JSON.stringify(err)+JSON.stringify(results))});
+                    _this.redisClient.multi().set("access_token:"+cacheKey,'OK').expire("access_token:"+cacheKey,60).exec(function(err,results){ _this.debug("cache: "+JSON.stringify(err)+JSON.stringify(results));});
                     _this.debug("Verification passed for token "+cacheKey+", cached for 60s");
                     next(null, "verified_by_persona");
                 }
@@ -132,11 +132,11 @@ PersonaClient.prototype.getToken = function (req) {
     if (req.header("Authorization"))
     {
         var result = req.header("Authorization").match(/Bearer\s(\S+)/);
-        if (result && result.length>1) return result[1];
+        if (result && result.length>1) { return result[1]; }
     }
     if (req.param('access_token'))
     {
-        return req.param('access_token')
+        return req.param('access_token');
     }
     return null;
 };
@@ -148,12 +148,12 @@ PersonaClient.prototype.getToken = function (req) {
  * @returns {boolean}
  */
 PersonaClient.prototype.log = function(severity, message) {
-    if(!this.config.enable_debug) return true;
+    if(!this.config.enable_debug) { return true; }
 
     if(this.config.logger){
-        if(severity == DEBUG){
+        if(severity === DEBUG){
             this.config.logger.debug("[persona_client] " + message);
-        } else if ( severity == ERROR ){
+        } else if ( severity === ERROR ){
             this.config.logger.error("[persona_client] " + message);
         } else {
             console.log(severity +": [persona_client] " + message);
@@ -161,13 +161,14 @@ PersonaClient.prototype.log = function(severity, message) {
     } else {
         console.log(severity +": [persona_client] " + message);
     }
-}
+};
+
 PersonaClient.prototype.debug = function(message) {
     this.log(DEBUG, message);
-}
+};
 PersonaClient.prototype.error = function(message) {
     this.log(ERROR, message);
-}
+};
 
 
 /**
