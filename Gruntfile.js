@@ -2,7 +2,7 @@
 
 module.exports = function (grunt) {
 
-  // Project configuration.
+    // Project configuration.
     grunt.initConfig({
         mochaTest: {
             test: {
@@ -24,6 +24,21 @@ module.exports = function (grunt) {
                 src: ['index.js']
             }
         },
+        jsbeautifier: {
+            modify: {
+                src: ['Gruntfile.js', 'index.js'],
+                options: {
+                    config: '.jsbeautifyrc'
+                }
+            },
+            verify: {
+                src: ['Gruntfile.js', 'index.js'],
+                options: {
+                    mode: 'VERIFY_ONLY',
+                    config: '.jsbeautifyrc'
+                }
+            }
+        },
         watch: {
             gruntfile: {
                 files: '<%= jshint.gruntfile.src %>',
@@ -40,7 +55,10 @@ module.exports = function (grunt) {
     grunt.loadNpmTasks('grunt-mocha-test');
     grunt.loadNpmTasks('grunt-contrib-jshint');
     grunt.loadNpmTasks('grunt-contrib-watch');
+    grunt.loadNpmTasks('grunt-jsbeautifier');
 
     // Default task.
     grunt.registerTask('default', ['jshint', 'mochaTest']);
+    grunt.registerTask('clean', ['jshint', 'jsbeautifier:modify']);
+    grunt.registerTask('verify', ['jshint', 'jsbeautifier:verify']);
 };

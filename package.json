@@ -25,7 +25,8 @@
     "grunt-contrib-watch": "~0.5.0",
     "grunt-mocha-test": "~0.7.0",
     "should": "~2.1.0",
-    "mocha": "~1.14.0"
+    "mocha": "~1.14.0",
+    "grunt-jsbeautifier": "~0.2.6"
   },
   "dependencies": {
     "redis": "~0.9.1",
