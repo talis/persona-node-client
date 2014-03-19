@@ -157,10 +157,10 @@ PersonaClient.prototype.getToken = function (req) {
  * Create a presigned URL
  * @param urlToSign
  * @param secret
- * @param expiry
+ * @param expires
  * @param callback
  */
-PersonaClient.prototype.presignUrl = function(urlToSign, secret, expiry, callback){
+PersonaClient.prototype.presignUrl = function(urlToSign, secret, expires, callback){
     if(!urlToSign){
         throw new Error("You must provide a URL to sign");
     }
@@ -168,15 +168,15 @@ PersonaClient.prototype.presignUrl = function(urlToSign, secret, expiry, callbac
         throw new Error("You must provide secret with which to sign the url");
     }
 
-    if(!expiry){
-        expiry = new Date().getTime() + 900; // 15 minutes
+    if(!expires){
+        expires = new Date().getTime() + 900; // 15 minutes
     }
 
     var parsedURL = url.parse(urlToSign);
     var parsedQuery = querystring.parse(parsedURL.query);
 
-    if(!parsedQuery.expiry){
-        var expParam = urlToSign.indexOf("?") ? "&expiry=" + expiry : "?expiry=" + expiry;
+    if(!parsedQuery.expires){
+        var expParam = urlToSign.indexOf("?") ? "&expires=" + expires : "?expires=" + expires;
         if(urlToSign.indexOf('#') !== -1){
             urlToSign = urlToSign.replace("#", ''+expParam+'#');
         } else {
@@ -201,7 +201,7 @@ PersonaClient.prototype.presignUrl = function(urlToSign, secret, expiry, callbac
  * @param secret
  * @param callback
  */
-PersonaClient.prototype.isPresignedUrlValid = function(presignedUrl, secret, callback) {
+PersonaClient.prototype.isPresignedUrlValid = function(presignedUrl, secret) {
     if(!presignedUrl){
         throw new Error("You must provide a URL to validate");
     }
@@ -213,7 +213,7 @@ PersonaClient.prototype.isPresignedUrlValid = function(presignedUrl, secret, cal
     var parsedURL = url.parse(presignedUrl);
     var parsedQuery = querystring.parse(parsedURL.query);
     var signature = parsedQuery.signature;
-    var expiry = parsedQuery.expiry;
+    var expiry = parsedQuery.expires;
 
     if (signature) {
         // replace the signature im the URL...the original secret will have been created from the full URL WITHOUT the signature (obviously!)
@@ -227,23 +227,18 @@ PersonaClient.prototype.isPresignedUrlValid = function(presignedUrl, secret, cal
 
             if (expiry) {
                 if (expiry < new Date().getTime()) {
-                    return callback({error: "invalid_request", error_description: "presigned url has expired"}, null);
+                    return false;
                 }
             } else {
-                return callback({error: "invalid_request", error_description: "presigned url has no expiry parameter"}, null);
+                return false;
             }
 
-            var message = {
-                message: 'success',
-                description: 'Presigned URL is valid'
-            };
-
-            return callback(null, message);
+            return true;
         } else {
-            return callback({error: "invalid_request", error_description: "invalid URL"}, null);
+            return false;
         }
     } else {
-        return callback({error: "invalid_request", error_description: "no signature parameter found on URL"}, null);
+        return false;
     }
 };
 
