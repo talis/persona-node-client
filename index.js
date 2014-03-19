@@ -153,7 +153,13 @@ PersonaClient.prototype.getToken = function (req) {
     return null;
 };
 
-
+/**
+ * Create a presigned URL
+ * @param urlToSign
+ * @param secret
+ * @param expiry
+ * @param callback
+ */
 PersonaClient.prototype.presignUrl = function(urlToSign, secret, expiry, callback){
     if(!urlToSign){
         throw new Error("You must provide a URL to sign");
@@ -190,13 +196,12 @@ PersonaClient.prototype.presignUrl = function(urlToSign, secret, expiry, callbac
 };
 
 /**
- * https://talis.com/player?expiry=123456&instCode=google&signature=@£$@$£@
- *
- *
- * @param req
+ * Validate a presigned URL
+ * @param presignedUrl
+ * @param secret
  * @param callback
  */
-PersonaClient.prototype.isPresignedUrlValid = function (presignedUrl, secret, callback) {
+PersonaClient.prototype.isPresignedUrlValid = function(presignedUrl, secret, callback) {
     if(!presignedUrl){
         throw new Error("You must provide a URL to validate");
     }
@@ -233,12 +238,12 @@ PersonaClient.prototype.isPresignedUrlValid = function (presignedUrl, secret, ca
                 description: 'Presigned URL is valid'
             };
 
-            callback(null, message);
+            return callback(null, message);
         } else {
-            callback({error: "invalid_request", error_description: "invalid URL"}, null);
+            return callback({error: "invalid_request", error_description: "invalid URL"}, null);
         }
     } else {
-        callback({error: "invalid_request", error_description: "no signature parameter found on URL"}, null);
+        return callback({error: "invalid_request", error_description: "no signature parameter found on URL"}, null);
     }
 };
 
