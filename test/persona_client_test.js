@@ -7,6 +7,7 @@ var persona = require('../index.js');
 var _getOAuthToken = require('./utils')._getOAuthToken;
 var _getStubRequest = require('./utils')._getStubRequest;
 var _getStubResponse = require('./utils')._getStubResponse;
+var cryptojs = require('crypto-js');
 
 describe("Persona Client Test Suite", function(){
 
@@ -103,7 +104,7 @@ describe("Persona Client Test Suite", function(){
         });
     });
 
-    describe("- Validate Token tests", function(){
+    xdescribe("- Validate Token tests", function(){
 
         it("should not validate an invalid token", function(done){
             var personaClient = persona.createClient({
@@ -353,5 +354,386 @@ describe("Persona Client Test Suite", function(){
 
     });
 
+    describe("Generate and Validate Presigned Url Tests", function(){
 
+        var secret = "canyoukeepasecret";
+
+        it("should throw error if no URL is provided to sign", function(done){
+            var personaClient = persona.createClient({
+                persona_host:"persona",
+                persona_port:80,
+                persona_scheme:"http",
+                persona_oauth_route:"/oauth/tokens/",
+                redis_host:"localhost",
+                redis_port:6379,
+                redis_db:0,
+                enable_debug: false
+            });
+
+            var presignUrl = function(){
+                return personaClient.presignUrl(null, secret, null, function(err, result){});
+            };
+
+            presignUrl.should.throw("You must provide a URL to sign");
+            done();
+
+        });
+
+        it("should throw error if no secret is provided to sign with", function(done){
+            var personaClient = persona.createClient({
+                persona_host:"persona",
+                persona_port:80,
+                persona_scheme:"http",
+                persona_oauth_route:"/oauth/tokens/",
+                redis_host:"localhost",
+                redis_port:6379,
+                redis_db:0,
+                enable_debug: false
+            });
+
+            var urlToSign = 'http://192.168.10.62:3000/player?shortcode=google&expiry=1395160411633';
+
+            var presignUrl = function(){
+                return personaClient.presignUrl(urlToSign, null, null, function(err, result){});
+            };
+
+            presignUrl.should.throw("You must provide secret with which to sign the url");
+            done();
+
+        });
+
+        it("should generate presigned URL", function(done){
+            var personaClient = persona.createClient({
+                persona_host:"persona",
+                persona_port:80,
+                persona_scheme:"http",
+                persona_oauth_route:"/oauth/tokens/",
+                redis_host:"localhost",
+                redis_port:6379,
+                redis_db:0,
+                enable_debug: false
+            });
+            
+            var urlToSign = 'http://192.168.10.62:3000/player?shortcode=google&expiry=1395160411633';
+            var expectedHash = cryptojs.HmacSHA256(urlToSign, secret);
+
+            personaClient.presignUrl(urlToSign, secret, null, function(err, result){
+                if(err) return done(err);
+
+                result.should.equal('http://192.168.10.62:3000/player?shortcode=google&expiry=1395160411633&signature='+expectedHash);
+                done();
+            });
+
+        });
+
+        it("should generate presigned URL and add default expiry", function(done){
+            var personaClient = persona.createClient({
+                persona_host:"persona",
+                persona_port:80,
+                persona_scheme:"http",
+                persona_oauth_route:"/oauth/tokens/",
+                redis_host:"localhost",
+                redis_port:6379,
+                redis_db:0,
+                enable_debug: false
+            });
+
+            var urlToSign = 'http://192.168.10.62:3000/player?shortcode=google';
+
+            personaClient.presignUrl(urlToSign, secret, null, function(err, result){
+                if(err) return done(err);
+
+                result.should.contain('&expiry=');
+                done();
+            });
+
+        });
+
+        it("should generate presigned URL and add passed expiry", function(done){
+            var personaClient = persona.createClient({
+                persona_host:"persona",
+                persona_port:80,
+                persona_scheme:"http",
+                persona_oauth_route:"/oauth/tokens/",
+                redis_host:"localhost",
+                redis_port:6379,
+                redis_db:0,
+                enable_debug: false
+            });
+
+            var urlToSign = 'http://192.168.10.62:3000/player?shortcode=google';
+
+            var baseUrl = 'http://192.168.10.62:3000/player?shortcode=google';
+            var expiry = new Date().getTime() + 86400;
+
+            var urlWithExp = baseUrl + '&expiry=' + expiry;
+
+            var expectedHash = cryptojs.HmacSHA256(urlWithExp, secret);
+
+            var expectedURL = baseUrl + '&expiry=' + expiry + '&signature=' + expectedHash;
+
+            personaClient.presignUrl(urlToSign, secret, expiry, function(err, result){
+                if(err) return done(err);
+
+                result.should.equal(expectedURL);
+                done();
+            });
+
+        });
+
+        it("should generate presigned URL that has hash component", function(done){
+            var personaClient = persona.createClient({
+                persona_host:"persona",
+                persona_port:80,
+                persona_scheme:"http",
+                persona_oauth_route:"/oauth/tokens/",
+                redis_host:"localhost",
+                redis_port:6379,
+                redis_db:0,
+                enable_debug: false
+            });
+
+            var urlToSign = 'http://192.168.10.62:3000/player?shortcode=google&expiry=1395160411633#/modules/52d01975d705e4730100000a/resources/5322e5413c53585456000006';
+            var expectedHash = cryptojs.HmacSHA256(urlToSign, secret);
+            var expectedUrl = 'http://192.168.10.62:3000/player?shortcode=google&expiry=1395160411633&signature=' + expectedHash + '#/modules/52d01975d705e4730100000a/resources/5322e5413c53585456000006';
+
+            personaClient.presignUrl(urlToSign, secret, null, function(err, result){
+                if(err) return done(err);
+
+                result.should.equal(expectedUrl);
+
+                done();
+            });
+
+        });
+
+        it("should generate presigned URL that has hash component and add default expiry", function(done){
+            var personaClient = persona.createClient({
+                persona_host:"persona",
+                persona_port:80,
+                persona_scheme:"http",
+                persona_oauth_route:"/oauth/tokens/",
+                redis_host:"localhost",
+                redis_port:6379,
+                redis_db:0,
+                enable_debug: false
+            });
+
+            var urlHash = '#/modules/52d01975d705e4730100000a/resources/5322e5413c53585456000006';
+            var urlToSign = 'http://192.168.10.62:3000/player?shortcode=google' + urlHash;
+
+            personaClient.presignUrl(urlToSign, secret, null, function(err, result){
+                if(err) return done(err);
+
+                result.should.contain('&expiry=');
+                result.should.contain(urlHash);
+
+                done();
+            });
+
+        });
+
+        it("should generate presigned URL that has hash component and add passed expiry", function(done){
+            var personaClient = persona.createClient({
+                persona_host:"persona",
+                persona_port:80,
+                persona_scheme:"http",
+                persona_oauth_route:"/oauth/tokens/",
+                redis_host:"localhost",
+                redis_port:6379,
+                redis_db:0,
+                enable_debug: false
+            });
+
+            var urlHash = '#/modules/52d01975d705e4730100000a/resources/5322e5413c53585456000006';
+            var baseUrl = 'http://192.168.10.62:3000/player?shortcode=google';
+            var urlToSign = baseUrl + urlHash;
+            var expiry = new Date().getTime() + 86400;
+
+            var urlWithExp = baseUrl + '&expiry=' + expiry + urlHash;
+
+            var expectedHash = cryptojs.HmacSHA256(urlWithExp, secret);
+
+            var expectedURL = baseUrl + '&expiry=' + expiry + '&signature=' + expectedHash + urlHash;
+
+            personaClient.presignUrl(urlToSign, secret, expiry, function(err, result){
+                if(err) return done(err);
+
+                result.should.equal(expectedURL);
+
+                done();
+            });
+
+        });
+
+        it("should throw error if no presigned URL is provided to validate", function(done){
+            var personaClient = persona.createClient({
+                persona_host:"persona",
+                persona_port:80,
+                persona_scheme:"http",
+                persona_oauth_route:"/oauth/tokens/",
+                redis_host:"localhost",
+                redis_port:6379,
+                redis_db:0,
+                enable_debug: false
+            });
+
+            var validateUrl = function(){
+                return personaClient.isPresignedUrlValid(null, secret, function(err, result){});
+            };
+
+            validateUrl.should.throw("You must provide a URL to validate");
+            done();
+
+        });
+
+        it("should throw error if no secret is provided to validate", function(done){
+            var personaClient = persona.createClient({
+                persona_host:"persona",
+                persona_port:80,
+                persona_scheme:"http",
+                persona_oauth_route:"/oauth/tokens/",
+                redis_host:"localhost",
+                redis_port:6379,
+                redis_db:0,
+                enable_debug: false
+            });
+
+            var urlToValidate = 'http://192.168.10.62:3000/player?shortcode=google&expiry=1395229157990&signature=ae1ef4f1f2e8a45643e51ab34cc1d08dd627f5bb6e9569b84bcce622040a41fb#/modules/52d01975d705e4730100000a/resources/5322e5413c53585456000006';
+
+            var validateUrl = function(){
+                return personaClient.isPresignedUrlValid(urlToValidate, null, function(err, result){});
+            };
+
+            validateUrl.should.throw("You must provide secret with which to validate the url");
+            done();
+
+        });
+
+        it("should validate a presigned URL", function(done){
+            var personaClient = persona.createClient({
+                persona_host:"persona",
+                persona_port:80,
+                persona_scheme:"http",
+                persona_oauth_route:"/oauth/tokens/",
+                redis_host:"localhost",
+                redis_port:6379,
+                redis_db:0,
+                enable_debug: false
+            });
+
+            var urlHash = '#/modules/52d01975d705e4730100000a/resources/5322e5413c53585456000006';
+            var baseUrl = 'http://192.168.10.62:3000/player?shortcode=google';
+            var urlToSign = baseUrl + urlHash;
+            var expiry = new Date().getTime() + 86400;
+
+            var urlWithExp = baseUrl + '&expiry=' + expiry + urlHash;
+
+            var hash = cryptojs.HmacSHA256(urlWithExp, secret);
+
+            var urlToValidate = baseUrl + '&expiry=' + expiry + '&signature=' + hash + urlHash;
+
+            personaClient.isPresignedUrlValid(urlToValidate, secret, function(err, result){
+                if(err) return done(err);
+
+                result.message.should.equal('success');
+
+                done();
+            });
+
+        });
+
+        it("should validate a presigned URL has an expiry", function(done){
+            var personaClient = persona.createClient({
+                persona_host:"persona",
+                persona_port:80,
+                persona_scheme:"http",
+                persona_oauth_route:"/oauth/tokens/",
+                redis_host:"localhost",
+                redis_port:6379,
+                redis_db:0,
+                enable_debug: false
+            });
+
+            var urlHash = '#/modules/52d01975d705e4730100000a/resources/5322e5413c53585456000006';
+            var baseUrl = 'http://192.168.10.62:3000/player?shortcode=google';
+            var urlToSign = baseUrl + urlHash;
+            var hash = cryptojs.HmacSHA256(urlToSign, secret);
+
+            var urlToValidate = baseUrl + '&signature=' + hash + urlHash;
+
+            personaClient.isPresignedUrlValid(urlToValidate, secret, function(err, result){
+                err.error.should.equal('invalid_request');
+                err.error_description.should.equal('presigned url has no expiry parameter');
+
+                done();
+            });
+
+        });
+
+        it("should validate a presigned URL has expired", function(done){
+            var personaClient = persona.createClient({
+                persona_host:"persona",
+                persona_port:80,
+                persona_scheme:"http",
+                persona_oauth_route:"/oauth/tokens/",
+                redis_host:"localhost",
+                redis_port:6379,
+                redis_db:0,
+                enable_debug: false
+            });
+
+            var urlHash = '#/modules/52d01975d705e4730100000a/resources/5322e5413c53585456000006';
+            var baseUrl = 'http://192.168.10.62:3000/player?shortcode=google';
+            var urlToSign = baseUrl + urlHash;
+            var expiry = new Date().getTime() - 5;
+
+            var urlWithExp = baseUrl + '&expiry=' + expiry + urlHash;
+
+            var hash = cryptojs.HmacSHA256(urlWithExp, secret);
+
+            var urlToValidate = baseUrl + '&expiry=' + expiry + '&signature=' + hash + urlHash;
+
+            personaClient.isPresignedUrlValid(urlToValidate, secret, function(err, result){
+                err.error.should.equal('invalid_request');
+                err.error_description.should.equal('presigned url has expired');
+
+                done();
+            });
+
+        });
+
+        it("should validate a presigned URL is invalid", function(done){
+            var personaClient = persona.createClient({
+                persona_host:"persona",
+                persona_port:80,
+                persona_scheme:"http",
+                persona_oauth_route:"/oauth/tokens/",
+                redis_host:"localhost",
+                redis_port:6379,
+                redis_db:0,
+                enable_debug: false
+            });
+
+            var urlHash = '#/modules/52d01975d705e4730100000a/resources/5322e5413c53585456000006';
+            var baseUrl = 'http://192.168.10.62:3000/player?shortcode=google';
+            var urlToSign = baseUrl + urlHash;
+            var expiry = new Date().getTime() + 86400;
+
+            var urlWithExp = baseUrl + '&expiry=' + expiry + urlHash + '23'; // add additional data that will cause an invalid hash to be generated
+
+            var hash = cryptojs.HmacSHA256(urlWithExp, secret);
+
+            var urlToValidate = baseUrl + '&expiry=' + expiry + '&signature=' + hash + urlHash;
+
+            personaClient.isPresignedUrlValid(urlToValidate, secret, function(err, result){
+                err.error.should.equal('invalid_request');
+                err.error_description.should.equal('invalid URL');
+
+                done();
+            });
+
+        });
+
+    });
 });

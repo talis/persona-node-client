@@ -1,5 +1,9 @@
 'use strict';
 
+var cryptojs = require('crypto-js');
+var url = require('url');
+var querystring = require('querystring');
+
 // log severities
 var DEBUG = "debug";
 var ERROR = "error";
@@ -53,7 +57,6 @@ var PersonaClient = function (config) {
     if (this.config.redis_db === undefined) {
         throw new Error("You must specify the Redis db");
     }
-
     // connect to redis and switch to the configured db
     var redis = require('redis');
     this.redisClient = redis.createClient(this.config.redis_port, this.config.redis_host);
@@ -61,6 +64,7 @@ var PersonaClient = function (config) {
 
     // need to instantiate this based on the configured scheme
     this.http = require(this.config.persona_scheme);
+
 
     this.debug("Persona Client Created");
 };
@@ -148,6 +152,96 @@ PersonaClient.prototype.getToken = function (req) {
     }
     return null;
 };
+
+
+PersonaClient.prototype.presignUrl = function(urlToSign, secret, expiry, callback){
+    if(!urlToSign){
+        throw new Error("You must provide a URL to sign");
+    }
+    if(!secret){
+        throw new Error("You must provide secret with which to sign the url");
+    }
+
+    if(!expiry){
+        expiry = new Date().getTime() + 900; // 15 minutes
+    }
+
+    var parsedURL = url.parse(urlToSign);
+    var parsedQuery = querystring.parse(parsedURL.query);
+
+    if(!parsedQuery.expiry){
+        var expParam = urlToSign.indexOf("?") ? "&expiry=" + expiry : "?expiry=" + expiry;
+        if(urlToSign.indexOf('#') !== -1){
+            urlToSign = urlToSign.replace("#", ''+expParam+'#');
+        } else {
+            urlToSign += expParam;
+        }
+
+        parsedURL = url.parse(urlToSign);
+    }
+
+    // generate a hash by re-signing the fullURL we where passed but with the 'signature' parameter removed
+    var hash = cryptojs.HmacSHA256(urlToSign, secret);
+
+    // now insert the hash into the query string
+    var signedUrl = parsedURL.protocol + '//' + parsedURL.host + parsedURL.path + '&signature=' + hash + (parsedURL.hash ? parsedURL.hash : '');
+
+    callback(null, signedUrl);
+};
+
+/**
+ * https://talis.com/player?expiry=123456&instCode=google&signature=@£$@$£@
+ *
+ *
+ * @param req
+ * @param callback
+ */
+PersonaClient.prototype.isPresignedUrlValid = function (presignedUrl, secret, callback) {
+    if(!presignedUrl){
+        throw new Error("You must provide a URL to validate");
+    }
+    if(!secret){
+        throw new Error("You must provide secret with which to validate the url");
+    }
+
+    // we need to ensure we have a URL passed over
+    var parsedURL = url.parse(presignedUrl);
+    var parsedQuery = querystring.parse(parsedURL.query);
+    var signature = parsedQuery.signature;
+    var expiry = parsedQuery.expiry;
+
+    if (signature) {
+        // replace the signature im the URL...the original secret will have been created from the full URL WITHOUT the signature (obviously!)
+        var presignedUrlMinusSignature = presignedUrl.replace('&signature=' + signature, '');
+
+        // generate a hash by re-signing the fullURL we where passed but with the 'signature' parameter removed
+        var hash = cryptojs.HmacSHA256(presignedUrlMinusSignature, secret);
+
+        // check if the hash we created matches the passed signature
+        if (hash.toString() === signature) {
+
+            if (expiry) {
+                if (expiry < new Date().getTime()) {
+                    return callback({error: "invalid_request", error_description: "presigned url has expired"}, null);
+                }
+            } else {
+                return callback({error: "invalid_request", error_description: "presigned url has no expiry parameter"}, null);
+            }
+
+            var message = {
+                message: 'success',
+                description: 'Presigned URL is valid'
+            };
+
+            callback(null, message);
+        } else {
+            callback({error: "invalid_request", error_description: "invalid URL"}, null);
+        }
+    } else {
+        callback({error: "invalid_request", error_description: "no signature parameter found on URL"}, null);
+    }
+};
+
 
 /**
  * Log wrapping functions
