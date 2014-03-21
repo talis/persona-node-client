@@ -169,7 +169,7 @@ PersonaClient.prototype.presignUrl = function(urlToSign, secret, expires, callba
     }
 
     if(!expires){
-        expires = new Date().getTime() + 900; // 15 minutes
+        expires = Math.floor(new Date().getTime()/1000)+900; // 15 minutes
     }
 
     var parsedURL = url.parse(urlToSign);
@@ -218,15 +218,13 @@ PersonaClient.prototype.isPresignedUrlValid = function(presignedUrl, secret) {
     if (signature) {
         // replace the signature im the URL...the original secret will have been created from the full URL WITHOUT the signature (obviously!)
         var presignedUrlMinusSignature = presignedUrl.replace('&signature=' + signature, '');
-
         // generate a hash by re-signing the fullURL we where passed but with the 'signature' parameter removed
         var hash = cryptojs.HmacSHA256(presignedUrlMinusSignature, secret);
 
         // check if the hash we created matches the passed signature
         if (hash.toString() === signature) {
-
             if (expiry) {
-                if (expiry < new Date().getTime()) {
+                if (expiry < (new Date().getTime()/1000)) {
                     return false;
                 }
             } else {

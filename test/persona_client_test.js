@@ -459,7 +459,7 @@ describe("Persona Client Test Suite", function(){
             var urlHash = '#/modules/52d01975d705e4730100000a/resources/5322e5413c53585456000006';
             var baseUrl = 'http://192.168.10.62:3000/player?shortcode=google';
             var urlToSign = baseUrl + urlHash;
-            var expiry = new Date().getTime() - 5;
+            var expiry = Math.floor(new Date().getTime()/1000) - 5;
 
             var urlWithExp = baseUrl + '&expires=' + expiry + urlHash;
 
