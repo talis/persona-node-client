@@ -215,27 +215,38 @@ PersonaClient.prototype.isPresignedUrlValid = function(presignedUrl, secret) {
     var signature = parsedQuery.signature;
     var expiry = parsedQuery.expires;
 
+    this.debug("Validating presignedUrl: " + presignedUrl + " with secret: " + secret);
     if (signature) {
         // replace the signature im the URL...the original secret will have been created from the full URL WITHOUT the signature (obviously!)
         var presignedUrlMinusSignature = presignedUrl.replace('&signature=' + signature, '');
+        this.debug("presignedUrl minus signature: " + presignedUrlMinusSignature);
         // generate a hash by re-signing the fullURL we where passed but with the 'signature' parameter removed
         var hash = cryptojs.HmacSHA256(presignedUrlMinusSignature, secret);
+        this.debug("hash generated for presignedurl: " + hash);
 
         // check if the hash we created matches the passed signature
         if (hash.toString() === signature) {
+            this.debug("generated hash matched signature");
             if (expiry) {
-                if (expiry < (new Date().getTime()/1000)) {
+                var epochNow = new Date().getTime()/1000;
+                this.debug("checking expiry: " + expiry + ' against epochNow: ' + epochNow );
+                if (expiry < epochNow) {
+                    this.debug("failed, presigned url has expired");
                     return false;
                 }
             } else {
+                this.debug("failed, presigned url has no expiry");
                 return false;
             }
 
+            this.debug("presigned url is valid");
             return true;
         } else {
+            this.debug("failed, generated hash did not match the signature");
             return false;
         }
     } else {
+        this.debug("failed, no signature provided");
         return false;
     }
 };
