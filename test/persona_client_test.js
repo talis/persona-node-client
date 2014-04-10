@@ -147,7 +147,7 @@ describe("Persona Client Test Suite", function(){
                 return personaClient.presignUrl(urlToSign, null, null, function(err, result){});
             };
 
-            presignUrl.should.throw("You must provide secret with which to sign the url");
+            presignUrl.should.throw("You must provide a secret with which to sign the url");
             done();
 
         });
@@ -355,7 +355,7 @@ describe("Persona Client Test Suite", function(){
                 return personaClient.isPresignedUrlValid(urlToValidate, null);
             };
 
-            validateUrl.should.throw("You must provide secret with which to validate the url");
+            validateUrl.should.throw("You must provide a secret with which to validate the url");
             done();
 
         });
@@ -755,5 +755,51 @@ describe("Persona Client Test Suite", function(){
         });
 
     });
+
+    describe("- Generate token tests", function() {
+        it("should return a token",function(done) {
+            var personaClient = persona.createClient({
+                persona_host:"persona",
+                persona_port:80,
+                persona_scheme:"http",
+                persona_oauth_route:"/oauth/tokens/",
+                redis_host:"localhost",
+                redis_port:6379,
+                redis_db:0,
+                enable_debug: false
+            });
+
+            personaClient.generateToken("primate","bananas",function(err,data) {
+                assert(err===null);
+                data.should.be.an.Object;
+                data.should.have.property("access_token");
+                data.should.have.property("expires_in");
+                data.should.have.property("scope");
+                data.should.have.property("token_type");
+                done();
+            });
+        });
+        it("should not return a token",function(done) {
+            var personaClient = persona.createClient({
+                persona_host:"persona",
+                persona_port:80,
+                persona_scheme:"http",
+                persona_oauth_route:"/oauth/tokens/",
+                redis_host:"localhost",
+                redis_port:6379,
+                redis_db:0,
+                enable_debug: false
+            });
+
+            personaClient.generateToken("primate","wrong_password",function(err,data) {
+                assert(err!=null);
+                err.should.be.a.String;
+                err.should.equal("Generate token failed with status code 400");
+                assert(data===null);
+                done();
+            });
+        });
+    });
+
 
 });

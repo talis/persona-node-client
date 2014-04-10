@@ -165,7 +165,7 @@ PersonaClient.prototype.presignUrl = function(urlToSign, secret, expires, callba
         throw new Error("You must provide a URL to sign");
     }
     if(!secret){
-        throw new Error("You must provide secret with which to sign the url");
+        throw new Error("You must provide a secret with which to sign the url");
     }
 
     if(!expires){
@@ -206,7 +206,7 @@ PersonaClient.prototype.isPresignedUrlValid = function(presignedUrl, secret) {
         throw new Error("You must provide a URL to validate");
     }
     if(!secret){
-        throw new Error("You must provide secret with which to validate the url");
+        throw new Error("You must provide a secret with which to validate the url");
     }
 
     // we need to ensure we have a URL passed over
@@ -251,6 +251,61 @@ PersonaClient.prototype.isPresignedUrlValid = function(presignedUrl, secret) {
     }
 };
 
+PersonaClient.prototype.generateToken = function(id,secret,callback) {
+    if (!id) {
+        throw new Error("You must provide an ID to generate a token");
+    }
+    if (!secret) {
+        throw new Error("You must provide a  secret to generate a token");
+    }
+
+    var _this = this,
+        data = {
+            'grant_type' : 'client_credentials'
+        },
+        post_data = querystring.stringify(data),
+        options = {
+            hostname: _this.config.persona_host,
+            port: _this.config.persona_port,
+            auth: id+":"+secret,
+            path: '/oauth/tokens',
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'Content-Length': post_data.length
+            }
+        };
+
+    var req = this.http.request(options,function (resp) {
+        if (resp.statusCode === 200) {
+            var str = '';
+            resp.on("data",function(chunk) {
+                str += chunk;
+            });
+            resp.on("end", function() {
+                var data = JSON.parse(str);
+                if (data.error) {
+                    callback(data.error,null);
+                } else if(data.access_token){
+                    callback(null,data);
+                } else {
+                    callback("Could not get access token",null);
+                }
+            });
+        } else {
+            var err = "Generate token failed with status code " + resp.statusCode;
+            _this.error(err);
+            callback(err,null);
+        }
+    });
+    req.on("error", function (e) {
+            var err = "OAuth::generateToken problem: " + e.message;
+            _this.error(err);
+            callback(err,null);
+        });
+    req.write(post_data);
+    req.end();
+};
 
 /**
  * Log wrapping functions
