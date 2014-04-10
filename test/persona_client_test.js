@@ -757,6 +757,44 @@ describe("Persona Client Test Suite", function(){
     });
 
     describe("- Generate token tests", function() {
+        it("should throw error if there is no id",function(done) {
+            var personaClient = persona.createClient({
+                persona_host:"persona",
+                persona_port:80,
+                persona_scheme:"http",
+                persona_oauth_route:"/oauth/tokens/",
+                redis_host:"localhost",
+                redis_port:6379,
+                redis_db:0,
+                enable_debug: false
+            });
+
+            var validateUrl = function(){
+                return personaClient.generateToken(null,"bananas",function(err,data) {});
+            };
+
+            validateUrl.should.throw("You must provide an ID to generate a token");
+            done();
+        });
+        it("should throw error if there is no secret",function(done) {
+            var personaClient = persona.createClient({
+                persona_host:"persona",
+                persona_port:80,
+                persona_scheme:"http",
+                persona_oauth_route:"/oauth/tokens/",
+                redis_host:"localhost",
+                redis_port:6379,
+                redis_db:0,
+                enable_debug: false
+            });
+
+            var validateUrl = function(){
+                return personaClient.generateToken("primate",null,function(err,data) {});
+            };
+
+            validateUrl.should.throw("You must provide a secret to generate a token");
+            done();
+        });
         it("should return a token",function(done) {
             var personaClient = persona.createClient({
                 persona_host:"persona",

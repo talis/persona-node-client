@@ -256,7 +256,7 @@ PersonaClient.prototype.generateToken = function(id,secret,callback) {
         throw new Error("You must provide an ID to generate a token");
     }
     if (!secret) {
-        throw new Error("You must provide a  secret to generate a token");
+        throw new Error("You must provide a secret to generate a token");
     }
 
     var _this = this,
