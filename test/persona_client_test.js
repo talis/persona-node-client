@@ -8,6 +8,7 @@ var _getOAuthToken = require('./utils')._getOAuthToken;
 var _getStubRequest = require('./utils')._getStubRequest;
 var _getStubResponse = require('./utils')._getStubResponse;
 var cryptojs = require('crypto-js');
+var sinon = require('sinon');
 
 describe("Persona Client Test Suite", function(){
 
@@ -757,6 +758,15 @@ describe("Persona Client Test Suite", function(){
     });
 
     describe("- Generate token tests", function() {
+        var clock;
+        beforeEach(function () {
+            clock = sinon.useFakeTimers();
+        });
+
+        afterEach(function () {
+            clock.restore();
+        });
+
         it("should throw error if there is no id",function(done) {
             var personaClient = persona.createClient({
                 persona_host:"persona",
@@ -770,10 +780,10 @@ describe("Persona Client Test Suite", function(){
             });
 
             var validateUrl = function(){
-                return personaClient.generateToken(null,"bananas",function(err,data) {});
+                return personaClient.obtainToken(null,"bananas",function(err,data) {});
             };
 
-            validateUrl.should.throw("You must provide an ID to generate a token");
+            validateUrl.should.throw("You must provide an ID to obtain a token");
             done();
         });
         it("should throw error if there is no secret",function(done) {
@@ -789,13 +799,13 @@ describe("Persona Client Test Suite", function(){
             });
 
             var validateUrl = function(){
-                return personaClient.generateToken("primate",null,function(err,data) {});
+                return personaClient.obtainToken("primate",null,function(err,data) {});
             };
 
-            validateUrl.should.throw("You must provide a secret to generate a token");
+            validateUrl.should.throw("You must provide a secret to obtain a token");
             done();
         });
-        it("should return a token",function(done) {
+        it("should return a token, and cache that token",function(done) {
             var personaClient = persona.createClient({
                 persona_host:"persona",
                 persona_port:80,
@@ -807,14 +817,29 @@ describe("Persona Client Test Suite", function(){
                 enable_debug: false
             });
 
-            personaClient.generateToken("primate","bananas",function(err,data) {
+            personaClient._removeTokenFromCache("primate","bananas",function(err) {
                 assert(err===null);
-                data.should.be.an.Object;
-                data.should.have.property("access_token");
-                data.should.have.property("expires_in");
-                data.should.have.property("scope");
-                data.should.have.property("token_type");
-                done();
+                personaClient.obtainToken("primate","bananas",function(err,data1) {
+                    assert(err===null);
+                    data1.should.have.property("access_token");
+                    data1.should.have.property("expires_in");
+                    data1.expires_in.should.equal(1800);
+                    data1.should.have.property("scope");
+                    data1.should.have.property("token_type");
+                    clock.tick(3000); //move clock forward by 1s to make sure expires_in is different
+                    personaClient.obtainToken("primate","bananas",function(err,data2) {
+                        assert(err===null);
+                        data2.should.have.property("access_token");
+                        data2.should.have.property("expires_in");
+                        data2.should.have.property("scope");
+                        data2.should.have.property("token_type");
+
+                        data1.access_token.should.equal(data2.access_token);
+                        data1.expires_in.should.not.equal(data2.expires_in);
+
+                        done();
+                    });
+                });
             });
         });
         it("should not return a token",function(done) {
@@ -829,7 +854,7 @@ describe("Persona Client Test Suite", function(){
                 enable_debug: false
             });
 
-            personaClient.generateToken("primate","wrong_password",function(err,data) {
+            personaClient.obtainToken("primate","wrong_password",function(err,data) {
                 assert(err!=null);
                 err.should.be.a.String;
                 err.should.equal("Generate token failed with status code 400");
