@@ -293,21 +293,31 @@ PersonaClient.prototype.obtainToken = function(id,secret,callback) {
                             str += chunk;
                         });
                         resp.on("end", function() {
-                            var data = JSON.parse(str);
+                            var data;
+                            try {
+                                data = JSON.parse(str);
+                            } catch (e) {
+                                callback("Error parsing response from persona: "+str,null);
+                                return;
+                            }
                             if (data.error) {
                                 callback(data.error,null);
                             } else if(data.access_token){
                                 // cache token
-                                var halflife = Math.ceil(data.expires_in/2),
-                                    now = (new Date().getTime() / 1000); // only cache for half the token expiry time, not really worth holding onto for ever
+                                var cacheFor = data.expires_in-60, // cache for token validity minus 60s
+                                    now = (new Date().getTime() / 1000); 
                                 data['expires_at'] = now + data.expires_in;
-                                _this.redisClient.multi().set(cacheKey, JSON.stringify(data)).expire(cacheKey, halflife).exec(function (err) {
-                                    if (err) {
-                                        callback(err,null);
-                                    } else {
-                                        callback(null,data);
-                                    }
-                                });
+                                if (cacheFor>0) {
+                                    _this.redisClient.multi().set(cacheKey, JSON.stringify(data)).expire(cacheKey, cacheFor).exec(function (err) {
+                                        if (err) {
+                                            callback(err,null);
+                                        } else {
+                                            callback(null,data);
+                                        }
+                                    });
+                                } else {
+                                    callback(null,data);
+                                }
                             } else {
                                 callback("Could not get access token",null);
                             }
@@ -327,7 +337,13 @@ PersonaClient.prototype.obtainToken = function(id,secret,callback) {
                 req.end();
             } else {
                 _this.debug("Found cached token for key "+cacheKey+": "+reply);
-                var data = JSON.parse(reply);
+                var data;
+                try {
+                    data = JSON.parse(reply);
+                } catch (e) {
+                    callback("Error parsing cached token: "+reply,null);
+                    return;
+                }
                 if (data.access_token) {
                     // recalc expires_in
                     var now = new Date().getTime()/1000;
