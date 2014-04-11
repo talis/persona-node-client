@@ -305,7 +305,7 @@ PersonaClient.prototype.obtainToken = function(id,secret,callback) {
                             } else if(data.access_token){
                                 // cache token
                                 var cacheFor = data.expires_in-60, // cache for token validity minus 60s
-                                    now = (new Date().getTime() / 1000); 
+                                    now = (new Date().getTime() / 1000);
                                 data['expires_at'] = now + data.expires_in;
                                 if (cacheFor>0) {
                                     _this.redisClient.multi().set(cacheKey, JSON.stringify(data)).expire(cacheKey, cacheFor).exec(function (err) {
