@@ -251,60 +251,138 @@ PersonaClient.prototype.isPresignedUrlValid = function(presignedUrl, secret) {
     }
 };
 
-PersonaClient.prototype.generateToken = function(id,secret,callback) {
+PersonaClient.prototype.obtainToken = function(id,secret,callback) {
     if (!id) {
-        throw new Error("You must provide an ID to generate a token");
+        throw new Error("You must provide an ID to obtain a token");
     }
     if (!secret) {
-        throw new Error("You must provide a secret to generate a token");
+        throw new Error("You must provide a secret to obtain a token");
     }
 
     var _this = this,
-        data = {
-            'grant_type' : 'client_credentials'
-        },
-        post_data = querystring.stringify(data),
-        options = {
-            hostname: _this.config.persona_host,
-            port: _this.config.persona_port,
-            auth: id+":"+secret,
-            path: '/oauth/tokens',
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-                'Content-Length': post_data.length
-            }
-        };
+        cacheKey = "obtain_token:"+cryptojs.HmacSHA256(id, secret);
 
-    var req = this.http.request(options,function (resp) {
-        if (resp.statusCode === 200) {
-            var str = '';
-            resp.on("data",function(chunk) {
-                str += chunk;
-            });
-            resp.on("end", function() {
-                var data = JSON.parse(str);
-                if (data.error) {
-                    callback(data.error,null);
-                } else if(data.access_token){
-                    callback(null,data);
-                } else {
-                    callback("Could not get access token",null);
-                }
-            });
-        } else {
-            var err = "Generate token failed with status code " + resp.statusCode;
-            _this.error(err);
+    // try cache first
+    this.redisClient.get(cacheKey,function (err, reply) {
+        if (err) {
             callback(err,null);
+        } else {
+            if (reply==null) {
+                _this.debug("Did not find token in cache for key "+cacheKey+", obtaining from server");
+                // obtain directly from persona
+                var form_data = {
+                        'grant_type' : 'client_credentials'
+                    },
+                    post_data = querystring.stringify(form_data),
+                    options = {
+                        hostname: _this.config.persona_host,
+                        port: _this.config.persona_port,
+                        auth: id+":"+secret,
+                        path: '/oauth/tokens',
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            'Content-Length': post_data.length
+                        }
+                    };
+
+                var req = _this.http.request(options,function (resp) {
+                    if (resp.statusCode === 200) {
+                        var str = '';
+                        resp.on("data",function(chunk) {
+                            str += chunk;
+                        });
+                        resp.on("end", function() {
+                            var data;
+                            try {
+                                data = JSON.parse(str);
+                            } catch (e) {
+                                callback("Error parsing response from persona: "+str,null);
+                                return;
+                            }
+                            if (data.error) {
+                                callback(data.error,null);
+                            } else if(data.access_token){
+                                // cache token
+                                var cacheFor = data.expires_in-60, // cache for token validity minus 60s
+                                    now = (new Date().getTime() / 1000);
+                                data['expires_at'] = now + data.expires_in;
+                                if (cacheFor>0) {
+                                    _this.redisClient.multi().set(cacheKey, JSON.stringify(data)).expire(cacheKey, cacheFor).exec(function (err) {
+                                        if (err) {
+                                            callback(err,null);
+                                        } else {
+                                            callback(null,data);
+                                        }
+                                    });
+                                } else {
+                                    callback(null,data);
+                                }
+                            } else {
+                                callback("Could not get access token",null);
+                            }
+                        });
+                    } else {
+                        var err = "Generate token failed with status code " + resp.statusCode;
+                        _this.error(err);
+                        callback(err,null);
+                    }
+                });
+                req.on("error", function (e) {
+                    var err = "OAuth::generateToken problem: " + e.message;
+                    _this.error(err);
+                    callback(err,null);
+                });
+                req.write(post_data);
+                req.end();
+            } else {
+                _this.debug("Found cached token for key "+cacheKey+": "+reply);
+                var data;
+                try {
+                    data = JSON.parse(reply);
+                } catch (e) {
+                    callback("Error parsing cached token: "+reply,null);
+                    return;
+                }
+                if (data.access_token) {
+                    // recalc expires_in
+                    var now = new Date().getTime()/1000;
+                    var expiresIn = data.expires_at - now;
+                    _this.debug("New expires_in is "+expiresIn);
+                    if (expiresIn>0) {
+                        data.expires_in = expiresIn;
+                        callback(null,data);
+                        return;
+                    }
+                }
+                // either expiresIn<=0, or malformed data, remove from redis and retry
+                _this._removeTokenFromCache(id,secret,function(err) {
+                    if (err) {
+                        callback(err,null);
+                    } else {
+                        // iterate
+                        _this.obtainToken(id,secret,callback);
+                    }
+                });
+            }
         }
     });
-    req.on("error", function (e) {
-            var err = "OAuth::generateToken problem: " + e.message;
-            _this.error(err);
-            callback(err,null);
-        });
-    req.write(post_data);
-    req.end();
+
+};
+
+/**
+ * Removes any tokens that are cached for the given id and secret
+ * @param id
+ * @param secret
+ * @param callback
+ * @private
+ */
+PersonaClient.prototype._removeTokenFromCache = function (id,secret,callback) {
+    var cacheKey = "obtain_token:"+cryptojs.HmacSHA256(id, secret), _this = this;
+    _this.redisClient.del(cacheKey,function(err) {
+        _this.debug("Deleting "+cacheKey+" and retrying obtainToken..");
+        callback(err);
+    });
 };
 
 /**

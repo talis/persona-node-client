@@ -1,6 +1,6 @@
 {
   "name": "persona_client",
-  "version": "0.1.1",
+  "version": "0.2.1",
   "private": true,
   "main": "./index.js",
   "description": "Node Client for Persona, repsonsible for retrieving, generating, caching and validating OAuth Tokens.",
@@ -26,7 +26,8 @@
     "grunt-mocha-test": "~0.7.0",
     "should": "~2.1.0",
     "mocha": "~1.14.0",
-    "grunt-jsbeautifier": "~0.2.6"
+    "grunt-jsbeautifier": "~0.2.6",
+    "sinon": "1.9.1"
   },
   "dependencies": {
     "redis": "~0.9.1",
