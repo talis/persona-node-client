@@ -1013,6 +1013,29 @@ describe("Persona Client Test Suite", function(){
             });
         });
 
+        it("should return 404 if user does not exist", function(done) {
+            var personaClient = persona.createClient({
+                persona_host:"persona",
+                persona_port:80,
+                persona_scheme:"http",
+                persona_oauth_route:"/oauth/tokens/",
+                redis_host:"localhost",
+                redis_port:6379,
+                redis_db:0,
+                enable_debug: false
+            });
+
+            _getOAuthToken("su",function(err,token) {
+                personaClient.requestAuthorization("guid_does_not_exist","test title",token,function(err,data) {
+                    assert(err!=null);
+                    err.should.be.a.String;
+                    err.should.equal("Request authorization failed with status code 404");
+                    assert(data===null);
+                    done();
+                });
+            })
+        });
+
     })
 
 
