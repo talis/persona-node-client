@@ -1013,6 +1013,30 @@ describe("Persona Client Test Suite", function(){
             });
         });
 
+        xit("should return 401 if token scope not valid", function(done) {
+            var personaClient = persona.createClient({
+                persona_host:"persona",
+                persona_port:80,
+                persona_scheme:"http",
+                persona_oauth_route:"/oauth/tokens/",
+                redis_host:"localhost",
+                redis_port:6379,
+                redis_db:0,
+                enable_debug: false
+            });
+
+            // todo: how do I get a token without su scope? bah!
+            _getOAuthToken("invalid_scope",function(err,token) {
+                personaClient.requestAuthorization("guid_does_not_exist","test title",token,function(err,data) {
+                    assert(err!=null);
+                    err.should.be.a.String;
+                    err.should.equal("Request authorization failed with status code 404");
+                    assert(data===null);
+                    done();
+                });
+            })
+        });
+
         it("should return 404 if user does not exist", function(done) {
             var personaClient = persona.createClient({
                 persona_host:"persona",
@@ -1031,6 +1055,29 @@ describe("Persona Client Test Suite", function(){
                     err.should.be.a.String;
                     err.should.equal("Request authorization failed with status code 404");
                     assert(data===null);
+                    done();
+                });
+            })
+        });
+
+        xit("should return credentials", function(done) {
+            var personaClient = persona.createClient({
+                persona_host:"persona",
+                persona_port:80,
+                persona_scheme:"http",
+                persona_oauth_route:"/oauth/tokens/",
+                redis_host:"localhost",
+                redis_port:6379,
+                redis_db:0,
+                enable_debug: false
+            });
+
+            _getOAuthToken("su",function(err,token) {
+                // todo: how do I get a guid that does exist?
+                personaClient.requestAuthorization("guid_does_exist","test title",token,function(err,data) {
+                    assert(err===null);
+                    assert(data!==null);
+                    data.should.be.an.Object;
                     done();
                 });
             })
