@@ -67,6 +67,7 @@ module.exports = function (grunt) {
 
     // Default task.
     grunt.registerTask('default', ['jshint', 'mochaTest:test']);
+    grunt.registerTask('beautify', ['jsbeautifier:modify']);
     grunt.registerTask('clean', ['jshint', 'jsbeautifier:modify']);
     grunt.registerTask('verify', ['jshint', 'jsbeautifier:verify']);
     grunt.registerTask('filtertest', 'Runs tests based on pattern specified', function (taskName, pattern) {

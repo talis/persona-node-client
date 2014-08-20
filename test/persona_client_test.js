@@ -9,6 +9,7 @@ var _getStubRequest = require('./utils')._getStubRequest;
 var _getStubResponse = require('./utils')._getStubResponse;
 var cryptojs = require('crypto-js');
 var sinon = require('sinon');
+var _ = require("lodash");
 
 describe("Persona Client Test Suite", function(){
 
@@ -105,7 +106,7 @@ describe("Persona Client Test Suite", function(){
         });
     });
 
-    describe("Generate and Validate Presigned Url Tests", function(){
+    describe("- Generate and Validate Presigned Url Tests", function(){
 
         var secret = "canyoukeepasecret";
 
@@ -863,6 +864,135 @@ describe("Persona Client Test Suite", function(){
             });
         });
     });
+
+    describe("- Request authorization tests",function(){
+        it("should throw an error if guid is not present", function(done) {
+            var personaClient = persona.createClient({
+                persona_host:"persona",
+                persona_port:80,
+                persona_scheme:"http",
+                persona_oauth_route:"/oauth/tokens/",
+                redis_host:"localhost",
+                redis_port:6379,
+                redis_db:0,
+                enable_debug: false
+            });
+
+            personaClient.requestAuthorization(null,"test title","some_token",function(err,data) {
+                assert(err!=null);
+                err.should.be.a.String;
+                err.should.equal("guid, title and token are required strings");
+                assert(data===null);
+                done();
+            });
+        });
+
+        it("should throw an error if guid is not a string", function(done) {
+            var personaClient = persona.createClient({
+                persona_host:"persona",
+                persona_port:80,
+                persona_scheme:"http",
+                persona_oauth_route:"/oauth/tokens/",
+                redis_host:"localhost",
+                redis_port:6379,
+                redis_db:0,
+                enable_debug: false
+            });
+
+            personaClient.requestAuthorization({},"test title","some_token",function(err,data) {
+                assert(err!=null);
+                err.should.be.a.String;
+                err.should.equal("guid, title and token are required strings");
+                assert(data===null);
+                done();
+            });
+        });
+
+        it("should throw an error if title is not present", function(done) {
+            var personaClient = persona.createClient({
+                persona_host:"persona",
+                persona_port:80,
+                persona_scheme:"http",
+                persona_oauth_route:"/oauth/tokens/",
+                redis_host:"localhost",
+                redis_port:6379,
+                redis_db:0,
+                enable_debug: false
+            });
+
+            personaClient.requestAuthorization("guid",null,"some_token",function(err,data) {
+                assert(err!=null);
+                err.should.be.a.String;
+                err.should.equal("guid, title and token are required strings");
+                assert(data===null);
+                done();
+            });
+        });
+
+        it("should throw an error if title is not a string", function(done) {
+            var personaClient = persona.createClient({
+                persona_host:"persona",
+                persona_port:80,
+                persona_scheme:"http",
+                persona_oauth_route:"/oauth/tokens/",
+                redis_host:"localhost",
+                redis_port:6379,
+                redis_db:0,
+                enable_debug: false
+            });
+
+            personaClient.requestAuthorization("guid",{},"some_token",function(err,data) {
+                assert(err!=null);
+                err.should.be.a.String;
+                err.should.equal("guid, title and token are required strings");
+                assert(data===null);
+                done();
+            });
+        });
+
+        it("should throw an error if token is not present", function(done) {
+            var personaClient = persona.createClient({
+                persona_host:"persona",
+                persona_port:80,
+                persona_scheme:"http",
+                persona_oauth_route:"/oauth/tokens/",
+                redis_host:"localhost",
+                redis_port:6379,
+                redis_db:0,
+                enable_debug: false
+            });
+
+            personaClient.requestAuthorization("guid","test title",null,function(err,data) {
+                assert(err!=null);
+                err.should.be.a.String;
+                err.should.equal("guid, title and token are required strings");
+                assert(data===null);
+                done();
+            });
+        });
+
+        it("should throw an error if token is not a string", function(done) {
+            var personaClient = persona.createClient({
+                persona_host:"persona",
+                persona_port:80,
+                persona_scheme:"http",
+                persona_oauth_route:"/oauth/tokens/",
+                redis_host:"localhost",
+                redis_port:6379,
+                redis_db:0,
+                enable_debug: false
+            });
+
+            personaClient.requestAuthorization("guid","test title",{},function(err,data) {
+                assert(err!=null);
+                err.should.be.a.String;
+                err.should.equal("guid, title and token are required strings");
+                assert(data===null);
+                done();
+            });
+        });
+
+    })
 
 
 });
