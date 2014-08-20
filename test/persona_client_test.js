@@ -992,6 +992,27 @@ describe("Persona Client Test Suite", function(){
             });
         });
 
+        it("should return 401 if token not valid", function(done) {
+            var personaClient = persona.createClient({
+                persona_host:"persona",
+                persona_port:80,
+                persona_scheme:"http",
+                persona_oauth_route:"/oauth/tokens/",
+                redis_host:"localhost",
+                redis_port:6379,
+                redis_db:0,
+                enable_debug: false
+            });
+
+            personaClient.requestAuthorization("guid","test title","invalid_token",function(err,data) {
+                assert(err!=null);
+                err.should.be.a.String;
+                err.should.equal("Request authorization failed with status code 401");
+                assert(data===null);
+                done();
+            });
+        });
+
     })
 
 
