@@ -466,8 +466,77 @@ PersonaClient.prototype.requestAuthorization = function (guid, title, id, secret
     });
 };
 
-PersonaClient.prototype.deleteAuthorization = function (authorization_client_id, token, callback) {
-    callback(null); //todo: implement
+/**
+ * Delete the authorization defined by authorization_client_id, using id and secret to auth
+ * @param authorization_client_id
+ * @param id
+ * @param secret
+ * @param callback
+ */
+PersonaClient.prototype.deleteAuthorization = function (guid, authorization_client_id, id, secret, callback) {
+    try {
+        _.map([guid, authorization_client_id, id, secret], function (arg) {
+            if (!_.isString(arg)) {
+                throw "guid, authorization_client_id, id and secret are required strings";
+            }
+        });
+    } catch (e) {
+        callback(e,null);
+        return;
+    }
+
+    var _this = this;
+    _this.obtainToken(id,secret,function(err,token) { // todo: push down into person itself. You should be able to request an authorization using basic auth with client id/secret
+        if (err) {
+            callback("Request authorization failed with error: "+err,null);
+        } else {
+            var options = {
+                    hostname: _this.config.persona_host,
+                    port: _this.config.persona_port,
+                    path: '/oauth/users/' + guid + '/authorizations/' + authorization_client_id,
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': 'Bearer ' + token.access_token,
+                        'Content-Type': 'application/json',
+                        'Content-Length': 0
+                    }
+                },
+                req = _this.http.request(options, function (resp) {
+                    if (resp.statusCode === 200) {
+                        var str = '';
+                        resp.on("data", function (chunk) {
+                            str += chunk;
+                        });
+                        resp.on("end", function () {
+                            var data;
+                            try {
+                                data = JSON.parse(str);
+                            } catch (e) {
+                                callback("Error parsing response from persona: " + str, null);
+                                return;
+                            }
+                            if (data.error) {
+                                callback(data.error, null);
+                            } else if (data.client_id && data.client_secret) {
+                                callback(null, data);
+                            } else {
+                                callback("Could not request authorization", null);
+                            }
+                        });
+                    } else {
+                        var err = "Request authorization failed with status code " + resp.statusCode;
+                        _this.error(err);
+                        callback(err, null);
+                    }
+                });
+            req.on("error", function (e) {
+                var err = "OAuth::requestAuthorization problem: " + e.message;
+                _this.error(err);
+                callback(err, null);
+            });
+            req.end();
+        }
+    });
 };
 
 /**
