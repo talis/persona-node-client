@@ -287,10 +287,9 @@ PersonaClient.prototype.obtainToken = function (id, secret, callback) {
             if (reply == null) {
                 _this.debug("Did not find token in cache for key " + cacheKey + ", obtaining from server");
                 // obtain directly from persona
-                var form_data = {
-                    'grant_type': 'client_credentials'
-                },
-                    post_data = querystring.stringify(form_data),
+                var post_data = {
+                        'grant_type': 'client_credentials'
+                    },
                     options = {
                         hostname: _this.config.persona_host,
                         port: _this.config.persona_port,
@@ -298,8 +297,7 @@ PersonaClient.prototype.obtainToken = function (id, secret, callback) {
                         path: '/oauth/tokens',
                         method: 'POST',
                         headers: {
-                            'Content-Type': 'application/x-www-form-urlencoded',
-                            'Content-Length': post_data.length
+                            'Content-Type': 'application/json',
                         }
                     };
 
@@ -350,7 +348,7 @@ PersonaClient.prototype.obtainToken = function (id, secret, callback) {
                     _this.error(err);
                     callback(err, null);
                 });
-                req.write(post_data);
+                req.write(JSON.stringify(post_data));
                 req.end();
             } else {
                 _this.debug("Found cached token for key " + cacheKey + ": " + reply);
