@@ -878,10 +878,10 @@ describe("Persona Client Test Suite", function(){
                 enable_debug: false
             });
 
-            personaClient.requestAuthorization(null,"test title","some_token",function(err,data) {
+            personaClient.requestAuthorization(null,"test title","some_id","some_secret",function(err,data) {
                 assert(err!=null);
                 err.should.be.a.String;
-                err.should.equal("guid, title and token are required strings");
+                err.should.equal("guid, title, id and secret are required strings");
                 assert(data===null);
                 done();
             });
@@ -899,10 +899,10 @@ describe("Persona Client Test Suite", function(){
                 enable_debug: false
             });
 
-            personaClient.requestAuthorization({},"test title","some_token",function(err,data) {
+            personaClient.requestAuthorization({},"test title","some_id","some_secret",function(err,data) {
                 assert(err!=null);
                 err.should.be.a.String;
-                err.should.equal("guid, title and token are required strings");
+                err.should.equal("guid, title, id and secret are required strings");
                 assert(data===null);
                 done();
             });
@@ -920,10 +920,10 @@ describe("Persona Client Test Suite", function(){
                 enable_debug: false
             });
 
-            personaClient.requestAuthorization("guid",null,"some_token",function(err,data) {
+            personaClient.requestAuthorization("guid",null,"some_id","some_secret",function(err,data) {
                 assert(err!=null);
                 err.should.be.a.String;
-                err.should.equal("guid, title and token are required strings");
+                err.should.equal("guid, title, id and secret are required strings");
                 assert(data===null);
                 done();
             });
@@ -941,16 +941,16 @@ describe("Persona Client Test Suite", function(){
                 enable_debug: false
             });
 
-            personaClient.requestAuthorization("guid",{},"some_token",function(err,data) {
+            personaClient.requestAuthorization("guid",{},"some_id","some_secret",function(err,data) {
                 assert(err!=null);
                 err.should.be.a.String;
-                err.should.equal("guid, title and token are required strings");
+                err.should.equal("guid, title, id and secret are required strings");
                 assert(data===null);
                 done();
             });
         });
 
-        it("should throw an error if token is not present", function(done) {
+        it("should throw an error if client id is not present", function(done) {
             var personaClient = persona.createClient({
                 persona_host:"persona",
                 persona_port:80,
@@ -962,16 +962,16 @@ describe("Persona Client Test Suite", function(){
                 enable_debug: false
             });
 
-            personaClient.requestAuthorization("guid","test title",null,function(err,data) {
+            personaClient.requestAuthorization("guid","test title",null,"some_secret",function(err,data) {
                 assert(err!=null);
                 err.should.be.a.String;
-                err.should.equal("guid, title and token are required strings");
+                err.should.equal("guid, title, id and secret are required strings");
                 assert(data===null);
                 done();
             });
         });
 
-        it("should throw an error if token is not a string", function(done) {
+        it("should throw an error if client id is not a string", function(done) {
             var personaClient = persona.createClient({
                 persona_host:"persona",
                 persona_port:80,
@@ -983,16 +983,16 @@ describe("Persona Client Test Suite", function(){
                 enable_debug: false
             });
 
-            personaClient.requestAuthorization("guid","test title",{},function(err,data) {
+            personaClient.requestAuthorization("guid","test title",{},"some_secret",function(err,data) {
                 assert(err!=null);
                 err.should.be.a.String;
-                err.should.equal("guid, title and token are required strings");
+                err.should.equal("guid, title, id and secret are required strings");
                 assert(data===null);
                 done();
             });
         });
 
-        it("should return 401 if token not valid", function(done) {
+        it("should throw an error if client secret is not present", function(done) {
             var personaClient = persona.createClient({
                 persona_host:"persona",
                 persona_port:80,
@@ -1004,10 +1004,52 @@ describe("Persona Client Test Suite", function(){
                 enable_debug: false
             });
 
-            personaClient.requestAuthorization("guid","test title","invalid_token",function(err,data) {
+            personaClient.requestAuthorization("guid","test title","some_id",null,function(err,data) {
                 assert(err!=null);
                 err.should.be.a.String;
-                err.should.equal("Request authorization failed with status code 401");
+                err.should.equal("guid, title, id and secret are required strings");
+                assert(data===null);
+                done();
+            });
+        });
+
+        it("should throw an error if client secret is not a string", function(done) {
+            var personaClient = persona.createClient({
+                persona_host:"persona",
+                persona_port:80,
+                persona_scheme:"http",
+                persona_oauth_route:"/oauth/tokens/",
+                redis_host:"localhost",
+                redis_port:6379,
+                redis_db:0,
+                enable_debug: false
+            });
+
+            personaClient.requestAuthorization("guid","test title","some_id",{},function(err,data) {
+                assert(err!=null);
+                err.should.be.a.String;
+                err.should.equal("guid, title, id and secret are required strings");
+                assert(data===null);
+                done();
+            });
+        });
+
+        it("should return 401 if id and secret not valid", function(done) {
+            var personaClient = persona.createClient({
+                persona_host:"persona",
+                persona_port:80,
+                persona_scheme:"http",
+                persona_oauth_route:"/oauth/tokens/",
+                redis_host:"localhost",
+                redis_port:6379,
+                redis_db:0,
+                enable_debug: false
+            });
+
+            personaClient.requestAuthorization("guid","test title","some_id","some_secret",function(err,data) {
+                assert(err!=null);
+                err.should.be.a.String;
+                err.should.equal("Request authorization failed with error: Generate token failed with status code 400");
                 assert(data===null);
                 done();
             });
@@ -1027,7 +1069,7 @@ describe("Persona Client Test Suite", function(){
 
             // todo: how do I get a token without su scope? bah!
             _getOAuthToken("invalid_scope",function(err,token) {
-                personaClient.requestAuthorization("guid_does_not_exist","test title",token,function(err,data) {
+                personaClient.requestAuthorization("guid_does_not_exist","test title","some_id","some_secret",function(err,data) {
                     assert(err!=null);
                     err.should.be.a.String;
                     err.should.equal("Request authorization failed with status code 404");
@@ -1049,15 +1091,13 @@ describe("Persona Client Test Suite", function(){
                 enable_debug: false
             });
 
-            _getOAuthToken("su",function(err,token) {
-                personaClient.requestAuthorization("guid_does_not_exist","test title",token,function(err,data) {
-                    assert(err!=null);
-                    err.should.be.a.String;
-                    err.should.equal("Request authorization failed with status code 404");
-                    assert(data===null);
-                    done();
-                });
-            })
+            personaClient.requestAuthorization("guid_does_not_exist","test title","primate","bananas",function(err,data) { // todo: move these creds somewhere else
+                assert(err!=null);
+                err.should.be.a.String;
+                err.should.equal("Request authorization failed with status code 404");
+                assert(data===null);
+                done();
+            });
         });
 
         xit("should return credentials", function(done) {
@@ -1072,15 +1112,12 @@ describe("Persona Client Test Suite", function(){
                 enable_debug: false
             });
 
-            _getOAuthToken("su",function(err,token) {
-                // todo: how do I get a guid that does exist?
-                personaClient.requestAuthorization("guid_does_exist","test title",token,function(err,data) {
-                    assert(err===null);
-                    assert(data!==null);
-                    data.should.be.an.Object;
-                    done();
-                });
-            })
+            personaClient.requestAuthorization("guid_does_exist","test title","some_id","some_secret",function(err,data) {
+                assert(err===null);
+                assert(data!==null);
+                data.should.be.an.Object;
+                done();
+            });
         });
 
     })
