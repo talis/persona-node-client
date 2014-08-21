@@ -400,9 +400,9 @@ PersonaClient.prototype.requestAuthorization = function (guid, title, token, cal
     }
 
     var _this = this,
-        post_data = {
+        post_data = JSON.stringify({
             'title': title
-        },
+        }),
         options = {
             hostname: _this.config.persona_host,
             port: _this.config.persona_port,
@@ -447,8 +447,12 @@ PersonaClient.prototype.requestAuthorization = function (guid, title, token, cal
         _this.error(err);
         callback(err, null);
     });
-    req.write(JSON.stringify(post_data));
+    req.write(post_data);
     req.end();
+};
+
+PersonaClient.prototype.deleteAuthorization = function (authorization_client_id, token, callback) {
+    callback(null); //todo: implement
 };
 
 /**
