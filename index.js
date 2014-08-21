@@ -287,9 +287,10 @@ PersonaClient.prototype.obtainToken = function (id, secret, callback) {
             if (reply == null) {
                 _this.debug("Did not find token in cache for key " + cacheKey + ", obtaining from server");
                 // obtain directly from persona
-                var post_data = {
+                var form_data = {
                         'grant_type': 'client_credentials'
                     },
+                    post_data = querystring.stringify(form_data),
                     options = {
                         hostname: _this.config.persona_host,
                         port: _this.config.persona_port,
@@ -297,7 +298,8 @@ PersonaClient.prototype.obtainToken = function (id, secret, callback) {
                         path: '/oauth/tokens',
                         method: 'POST',
                         headers: {
-                            'Content-Type': 'application/json',
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            'Content-Length': post_data.length
                         }
                     };
 
@@ -348,7 +350,7 @@ PersonaClient.prototype.obtainToken = function (id, secret, callback) {
                     _this.error(err);
                     callback(err, null);
                 });
-                req.write(JSON.stringify(post_data));
+                req.write(post_data);
                 req.end();
             } else {
                 _this.debug("Found cached token for key " + cacheKey + ": " + reply);
@@ -398,10 +400,9 @@ PersonaClient.prototype.requestAuthorization = function (guid, title, token, cal
     }
 
     var _this = this,
-        form_data = {
+        post_data = {
             'title': title
         },
-        post_data = querystring.stringify(form_data),
         options = {
             hostname: _this.config.persona_host,
             port: _this.config.persona_port,
@@ -409,7 +410,7 @@ PersonaClient.prototype.requestAuthorization = function (guid, title, token, cal
             method: 'POST',
             headers: {
                 'Authorization': 'Bearer ' + token,
-                'Content-Type': 'application/x-www-form-urlencoded',
+                'Content-Type': 'application/json',
                 'Content-Length': post_data.length
             }
         },
@@ -446,7 +447,7 @@ PersonaClient.prototype.requestAuthorization = function (guid, title, token, cal
         _this.error(err);
         callback(err, null);
     });
-    req.write(post_data);
+    req.write(JSON.stringify(post_data));
     req.end();
 };
 
