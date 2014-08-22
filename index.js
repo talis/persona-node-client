@@ -520,17 +520,17 @@ PersonaClient.prototype.deleteAuthorization = function (guid, authorization_clie
                             } else if (data.client_id && data.client_secret) {
                                 callback(null, data);
                             } else {
-                                callback("Could not request authorization", null);
+                                callback("Could not delete authorization", null);
                             }
                         });
                     } else {
-                        var err = "Request authorization failed with status code " + resp.statusCode;
+                        var err = "Delete authorization failed with status code " + resp.statusCode;
                         _this.error(err);
                         callback(err, null);
                     }
                 });
             req.on("error", function (e) {
-                var err = "OAuth::requestAuthorization problem: " + e.message;
+                var err = "OAuth::deleteAuthorization problem: " + e.message;
                 _this.error(err);
                 callback(err, null);
             });
