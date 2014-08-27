@@ -1067,7 +1067,7 @@ describe("Persona Client Test Suite", function(){
                 enable_debug: false
             });
 
-            // todo: how do I get a token without su scope? bah!
+            // todo: how do I get a token without su scope? bah! Also fix persona before enabling this test
             _getOAuthToken("invalid_scope",function(err,token) {
                 personaClient.requestAuthorization("guid_does_not_exist","test title","some_id","some_secret",function(err,data) {
                     assert(err!=null);
@@ -1112,6 +1112,7 @@ describe("Persona Client Test Suite", function(){
                 enable_debug: false
             });
 
+            // todo: how to get a valid guid?
             personaClient.requestAuthorization("guid_does_exist","test title","some_id","some_secret",function(err,data) {
                 assert(err===null);
                 assert(data!==null);
@@ -1324,7 +1325,7 @@ describe("Persona Client Test Suite", function(){
                 enable_debug: false
             });
 
-            // todo: how do I get a token without su scope? bah!
+            // todo: how do I get a token without su scope? bah! Also fix persona first before enabling this test
             _getOAuthToken("invalid_scope",function(err,token) {
                 personaClient.deleteAuthorization("guid", "authorization_client_id","some_id", "some_secret",function(err,data) {
                     assert(err!=null);
@@ -1351,7 +1352,7 @@ describe("Persona Client Test Suite", function(){
             personaClient.deleteAuthorization("guid_does_not_exist", "authorization_client_id","primate", "bananas",function(err,data) { //todo: move those credentials
                 assert(err!=null);
                 err.should.be.a.String;
-                err.should.equal("Request authorization failed with status code 501");
+                err.should.equal("Delete authorization failed with status code 501");
                 assert(data===null);
                 done();
             });
@@ -1373,7 +1374,7 @@ describe("Persona Client Test Suite", function(){
             personaClient.deleteAuthorization("guid", "authorization_client_id","primate", "bananas",function(err,data) { //todo: move those credentials
                 assert(err!=null);
                 err.should.be.a.String;
-                err.should.equal("Request authorization failed with status code 501");
+                err.should.equal("Delete authorization failed with status code 501");
                 assert(data===null);
                 done();
             });
