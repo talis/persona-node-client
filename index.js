@@ -75,7 +75,7 @@ var PersonaClient = function (config) {
  * @param res
  * @param next
  */
-PersonaClient.prototype.validateToken = function (req, res, next) {
+PersonaClient.prototype.validateToken = function (req, res, next, scope) {
     var token = this.getToken(req),
         _this = this;
 
@@ -103,8 +103,9 @@ PersonaClient.prototype.validateToken = function (req, res, next) {
         } else {
 
             var requestPath = _this.config.persona_oauth_route + token;
-            if (req.param("scope")) {
-                requestPath += "?scope=" + req.param("scope");
+            var usingScope = scope || req.param("scope") || null;
+            if (usingScope != null) {
+                requestPath += "?scope=" + usingScope;
             }
 
             var options = {
@@ -124,13 +125,18 @@ PersonaClient.prototype.validateToken = function (req, res, next) {
                     _this.debug("Verification passed for token " + cacheKey + ", cached for 60s");
                     next(null, "verified_by_persona");
                 } else {
-                    _this.debug("Verification failed for token " + cacheKey + " with status code " + oauthResp.statusCode);
-                    res.status(401);
-                    res.set("Connection", "close");
-                    res.json({
-                        "error": "invalid_token",
-                        "error_description": "The token is invalid or has expired"
-                    });
+                    if (usingScope && usingScope != "su") {
+                        // try su, they are allowed to perform any operation
+                        _this.validateToken(req,res,next,"su");
+                    } else {
+                        _this.debug("Verification failed for token " + cacheKey + " with status code " + oauthResp.statusCode);
+                        res.status(401);
+                        res.set("Connection", "close");
+                        res.json({
+                            "error": "invalid_token",
+                            "error_description": "The token is invalid or has expired"
+                        });
+                    }
                 }
             }).on("error", function (e) {
                 _this.error("OAuth::validateToken problem: " + e.message);
