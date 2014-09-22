@@ -1,7 +1,13 @@
 Node Client for Persona, repsonsible for retrieving, generating, caching and validating OAuth Tokens.
 
 ## Getting Started
-Install the module with: `npm install persona_client`
+Install the module by adding the following line to `packages.json`: 
+
+```
+    "persona_client": "git://github.com/talis/persona-node-client.git#0.3.0"
+```
+
+Create a persona client as follows:
 
 ```javascript
 var persona = require('persona_client');
@@ -18,17 +24,76 @@ var personaClient = persona.createClient({
 });
 ```
 
-## Documentation
-_(Coming soon)_
+If using express, we recommend the following middleware:
 
-## Examples
-_(Coming soon)_
+```javascript
+app.use(function(req,res,next){
+    req.personaClient = personaClient;
+    next();
+});
+```
+
+## Documentation
+
+### Validating tokens
+
+Here we validate the token supplied using a specific scope (optional)
+
+```javascript
+    /**
+     * Check if a user is allowed to impersonate another, and logs it
+     */
+    app.post('/some/route', function(req,res) {
+        req.personaClient.validateToken(req,res, function(){
+           // you're good, do stuff
+        },"tdc:app:support");
+    });
+```
+
+If the validation fails, `401` will be returned automatically.
+
+
+### Pre-signing signing urls
+
+Signing: 
+
+```javascript
+  personaClient.presignUrl('http://url.to.sign/','mySecret',secsSinceEpocToExpiry,function(err,signedUrl) {
+    // do stuff
+  }
+```
+
+Checking:
+
+```javascript
+  var isValid = personaClient.isPresignedUrlValid('http://url.to.sign/?signature=34234545','mySecret');
+```
+
+### Client authorizations
+
+Requesting: 
+
+```javascript
+  personaClient.requestAuthorization('user_guid', 'Required for access to admin', 'client_id', 'client_secret', function(err,authorization) {
+    // do stuff
+  });
+```
+
+Deleting:
+
+```javascript
+  personaClient.deleteAuthorization('user_guid', 'Required for access to admin', 'client_id', 'client_secret', function(err) {
+    // do stuff
+  });
+
+```
 
 ## Contributing
 In lieu of a formal styleguide, take care to maintain the existing coding style. Add unit tests for any new or changed functionality. Lint and test your code using [Grunt](http://gruntjs.com/).
 
 ## Release History
-_(Nothing yet)_
+
+0.3.0 - added the ability to request/delete client authorizations, and fixed scoping issue on validation.
 
 ## License
 Copyright (c) 2013 Talis Education Limited.
