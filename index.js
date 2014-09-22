@@ -1,8 +1,9 @@
 'use strict';
 
-var cryptojs = require('crypto-js');
-var url = require('url');
-var querystring = require('querystring');
+var cryptojs = require('crypto-js'),
+    url = require('url'),
+    querystring = require('querystring'),
+    _ = require('lodash');
 
 // log severities
 var DEBUG = "debug";
@@ -31,7 +32,7 @@ var ERROR = "error";
  * @constructor
  */
 var PersonaClient = function (config) {
-    this.config = config = config || {};
+    this.config = config || {};
 
     //TODO: find a less verbose way of doing this
 
@@ -65,11 +66,16 @@ var PersonaClient = function (config) {
     // need to instantiate this based on the configured scheme
     this.http = require(this.config.persona_scheme);
 
-
     this.debug("Persona Client Created");
 };
 
-PersonaClient.prototype.validateToken = function (req, res, next) {
+/**
+ * Express middleware that can be used to verify a token
+ * @param req
+ * @param res
+ * @param next
+ */
+PersonaClient.prototype.validateToken = function (req, res, next, scope) {
     var token = this.getToken(req),
         _this = this;
 
@@ -97,8 +103,9 @@ PersonaClient.prototype.validateToken = function (req, res, next) {
         } else {
 
             var requestPath = _this.config.persona_oauth_route + token;
-            if (req.param("scope")) {
-                requestPath += "?scope=" + req.param("scope");
+            var usingScope = scope || req.param("scope") || null;
+            if (usingScope != null) {
+                requestPath += "?scope=" + usingScope;
             }
 
             var options = {
@@ -118,13 +125,18 @@ PersonaClient.prototype.validateToken = function (req, res, next) {
                     _this.debug("Verification passed for token " + cacheKey + ", cached for 60s");
                     next(null, "verified_by_persona");
                 } else {
-                    _this.debug("Verification failed for token " + cacheKey + " with status code " + oauthResp.statusCode);
-                    res.status(401);
-                    res.set("Connection", "close");
-                    res.json({
-                        "error": "invalid_token",
-                        "error_description": "The token is invalid or has expired"
-                    });
+                    if (usingScope && usingScope !== "su") {
+                        // try su, they are allowed to perform any operation
+                        _this.validateToken(req,res,next,"su");
+                    } else {
+                        _this.debug("Verification failed for token " + cacheKey + " with status code " + oauthResp.statusCode);
+                        res.status(401);
+                        res.set("Connection", "close");
+                        res.json({
+                            "error": "invalid_token",
+                            "error_description": "The token is invalid or has expired"
+                        });
+                    }
                 }
             }).on("error", function (e) {
                 _this.error("OAuth::validateToken problem: " + e.message);
@@ -140,6 +152,11 @@ PersonaClient.prototype.validateToken = function (req, res, next) {
 
 };
 
+/**
+ * Extract a token from the request - try the header first, followed by the request params
+ * @param req
+ * @return {*}
+ */
 PersonaClient.prototype.getToken = function (req) {
     if (req.header("Authorization")) {
         var result = req.header("Authorization").match(/Bearer\s(\S+)/);
@@ -160,25 +177,25 @@ PersonaClient.prototype.getToken = function (req) {
  * @param expires
  * @param callback
  */
-PersonaClient.prototype.presignUrl = function(urlToSign, secret, expires, callback){
-    if(!urlToSign){
+PersonaClient.prototype.presignUrl = function (urlToSign, secret, expires, callback) {
+    if (!urlToSign) {
         throw new Error("You must provide a URL to sign");
     }
-    if(!secret){
+    if (!secret) {
         throw new Error("You must provide a secret with which to sign the url");
     }
 
-    if(!expires){
-        expires = Math.floor(new Date().getTime()/1000)+900; // 15 minutes
+    if (!expires) {
+        expires = Math.floor(new Date().getTime() / 1000) + 900; // 15 minutes
     }
 
     var parsedURL = url.parse(urlToSign);
     var parsedQuery = querystring.parse(parsedURL.query);
 
-    if(!parsedQuery.expires){
+    if (!parsedQuery.expires) {
         var expParam = urlToSign.indexOf("?") ? "&expires=" + expires : "?expires=" + expires;
-        if(urlToSign.indexOf('#') !== -1){
-            urlToSign = urlToSign.replace("#", ''+expParam+'#');
+        if (urlToSign.indexOf('#') !== -1) {
+            urlToSign = urlToSign.replace("#", '' + expParam + '#');
         } else {
             urlToSign += expParam;
         }
@@ -201,11 +218,11 @@ PersonaClient.prototype.presignUrl = function(urlToSign, secret, expires, callba
  * @param secret
  * @param callback
  */
-PersonaClient.prototype.isPresignedUrlValid = function(presignedUrl, secret) {
-    if(!presignedUrl){
+PersonaClient.prototype.isPresignedUrlValid = function (presignedUrl, secret) {
+    if (!presignedUrl) {
         throw new Error("You must provide a URL to validate");
     }
-    if(!secret){
+    if (!secret) {
         throw new Error("You must provide a secret with which to validate the url");
     }
 
@@ -228,8 +245,8 @@ PersonaClient.prototype.isPresignedUrlValid = function(presignedUrl, secret) {
         if (hash.toString() === signature) {
             this.debug("generated hash matched signature");
             if (expiry) {
-                var epochNow = new Date().getTime()/1000;
-                this.debug("checking expiry: " + expiry + ' against epochNow: ' + epochNow );
+                var epochNow = new Date().getTime() / 1000;
+                this.debug("checking expiry: " + expiry + ' against epochNow: ' + epochNow);
                 if (expiry < epochNow) {
                     this.debug("failed, presigned url has expired");
                     return false;
@@ -251,7 +268,13 @@ PersonaClient.prototype.isPresignedUrlValid = function(presignedUrl, secret) {
     }
 };
 
-PersonaClient.prototype.obtainToken = function(id,secret,callback) {
+/**
+ * Obtain a new token for the given id and secret
+ * @param id
+ * @param secret
+ * @param callback
+ */
+PersonaClient.prototype.obtainToken = function (id, secret, callback) {
     if (!id) {
         throw new Error("You must provide an ID to obtain a token");
     }
@@ -260,24 +283,24 @@ PersonaClient.prototype.obtainToken = function(id,secret,callback) {
     }
 
     var _this = this,
-        cacheKey = "obtain_token:"+cryptojs.HmacSHA256(id, secret);
+        cacheKey = "obtain_token:" + cryptojs.HmacSHA256(id, secret);
 
     // try cache first
-    this.redisClient.get(cacheKey,function (err, reply) {
+    this.redisClient.get(cacheKey, function (err, reply) {
         if (err) {
-            callback(err,null);
+            callback(err, null);
         } else {
-            if (reply==null) {
-                _this.debug("Did not find token in cache for key "+cacheKey+", obtaining from server");
+            if (reply == null) {
+                _this.debug("Did not find token in cache for key " + cacheKey + ", obtaining from server");
                 // obtain directly from persona
                 var form_data = {
-                        'grant_type' : 'client_credentials'
+                        'grant_type': 'client_credentials'
                     },
                     post_data = querystring.stringify(form_data),
                     options = {
                         hostname: _this.config.persona_host,
                         port: _this.config.persona_port,
-                        auth: id+":"+secret,
+                        auth: id + ":" + secret,
                         path: '/oauth/tokens',
                         method: 'POST',
                         headers: {
@@ -286,82 +309,82 @@ PersonaClient.prototype.obtainToken = function(id,secret,callback) {
                         }
                     };
 
-                var req = _this.http.request(options,function (resp) {
+                var req = _this.http.request(options, function (resp) {
                     if (resp.statusCode === 200) {
                         var str = '';
-                        resp.on("data",function(chunk) {
+                        resp.on("data", function (chunk) {
                             str += chunk;
                         });
-                        resp.on("end", function() {
+                        resp.on("end", function () {
                             var data;
                             try {
                                 data = JSON.parse(str);
                             } catch (e) {
-                                callback("Error parsing response from persona: "+str,null);
+                                callback("Error parsing response from persona: " + str, null);
                                 return;
                             }
                             if (data.error) {
-                                callback(data.error,null);
-                            } else if(data.access_token){
+                                callback(data.error, null);
+                            } else if (data.access_token) {
                                 // cache token
-                                var cacheFor = data.expires_in-60, // cache for token validity minus 60s
+                                var cacheFor = data.expires_in - 60, // cache for token validity minus 60s
                                     now = (new Date().getTime() / 1000);
                                 data['expires_at'] = now + data.expires_in;
-                                if (cacheFor>0) {
+                                if (cacheFor > 0) {
                                     _this.redisClient.multi().set(cacheKey, JSON.stringify(data)).expire(cacheKey, cacheFor).exec(function (err) {
                                         if (err) {
-                                            callback(err,null);
+                                            callback(err, null);
                                         } else {
-                                            callback(null,data);
+                                            callback(null, data);
                                         }
                                     });
                                 } else {
-                                    callback(null,data);
+                                    callback(null, data);
                                 }
                             } else {
-                                callback("Could not get access token",null);
+                                callback("Could not get access token", null);
                             }
                         });
                     } else {
                         var err = "Generate token failed with status code " + resp.statusCode;
                         _this.error(err);
-                        callback(err,null);
+                        callback(err, null);
                     }
                 });
                 req.on("error", function (e) {
                     var err = "OAuth::generateToken problem: " + e.message;
                     _this.error(err);
-                    callback(err,null);
+                    callback(err, null);
                 });
                 req.write(post_data);
                 req.end();
             } else {
-                _this.debug("Found cached token for key "+cacheKey+": "+reply);
+                _this.debug("Found cached token for key " + cacheKey + ": " + reply);
                 var data;
                 try {
                     data = JSON.parse(reply);
                 } catch (e) {
-                    callback("Error parsing cached token: "+reply,null);
+                    callback("Error parsing cached token: " + reply, null);
                     return;
                 }
                 if (data.access_token) {
                     // recalc expires_in
-                    var now = new Date().getTime()/1000;
+                    var now = new Date().getTime() / 1000;
                     var expiresIn = data.expires_at - now;
-                    _this.debug("New expires_in is "+expiresIn);
-                    if (expiresIn>0) {
+                    _this.debug("New expires_in is " + expiresIn);
+                    if (expiresIn > 0) {
                         data.expires_in = expiresIn;
-                        callback(null,data);
+                        callback(null, data);
                         return;
                     }
                 }
                 // either expiresIn<=0, or malformed data, remove from redis and retry
-                _this._removeTokenFromCache(id,secret,function(err) {
+                _this._removeTokenFromCache(id, secret, function (err) {
                     if (err) {
-                        callback(err,null);
+                        callback(err, null);
                     } else {
                         // iterate
-                        _this.obtainToken(id,secret,callback);
+                        _this.obtainToken(id, secret, callback);
                     }
                 });
             }
@@ -371,16 +394,150 @@ PersonaClient.prototype.obtainToken = function(id,secret,callback) {
 };
 
 /**
+ * Request an application authorization (client_id/secret pair) for a user with guid, authing with id and secret.
+ * Use title to describe the purpose.
+ * @param guid
+ * @param title
+ * @param id
+ * @param secret
+ * @param callback
+ */
+PersonaClient.prototype.requestAuthorization = function (guid, title, id, secret, callback) {
+    try {
+        _.map([guid, title, id, secret], function (arg) {
+            if (!_.isString(arg)) {
+                throw "guid, title, id and secret are required strings";
+            }
+        });
+    } catch (e) {
+        callback(e,null);
+        return;
+    }
+
+    var _this = this;
+    _this.obtainToken(id,secret,function(err,token) { // todo: push down into person itself. You should be able to request an authorization using basic auth with client id/secret
+        if (err) {
+            callback("Request authorization failed with error: "+err,null);
+        } else {
+            var post_data = JSON.stringify({
+                    'title': title
+                }),
+                options = {
+                    hostname: _this.config.persona_host,
+                    port: _this.config.persona_port,
+                    path: '/oauth/users/' + guid + '/authorizations',
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + token.access_token,
+                        'Content-Type': 'application/json',
+                        'Content-Length': post_data.length
+                    }
+                },
+                req = _this.http.request(options, function (resp) {
+                    if (resp.statusCode === 200) {
+                        var str = '';
+                        resp.on("data", function (chunk) {
+                            str += chunk;
+                        });
+                        resp.on("end", function () {
+                            var data;
+                            try {
+                                data = JSON.parse(str);
+                            } catch (e) {
+                                callback("Error parsing response from persona: " + str, null);
+                                return;
+                            }
+                            if (data.error) {
+                                callback(data.error, null);
+                            } else if (data.client_id && data.client_secret) {
+                                callback(null, data);
+                            } else {
+                                callback("Could not request authorization", null);
+                            }
+                        });
+                    } else {
+                        var err = "Request authorization failed with status code " + resp.statusCode;
+                        _this.error(err);
+                        callback(err, null);
+                    }
+                });
+            req.on("error", function (e) {
+                var err = "OAuth::requestAuthorization problem: " + e.message;
+                _this.error(err);
+                callback(err, null);
+            });
+            req.write(post_data);
+            req.end();
+        }
+    });
+};
+
+/**
+ * Delete the authorization defined by authorization_client_id, using id and secret to auth
+ * @param authorization_client_id
+ * @param id
+ * @param secret
+ * @param callback
+ */
+PersonaClient.prototype.deleteAuthorization = function (guid, authorization_client_id, id, secret, callback) {
+    try {
+        _.map([guid, authorization_client_id, id, secret], function (arg) {
+            if (!_.isString(arg)) {
+                throw "guid, authorization_client_id, id and secret are required strings";
+            }
+        });
+    } catch (e) {
+        callback(e,null);
+        return;
+    }
+
+    var _this = this;
+    _this.obtainToken(id,secret,function(err,token) { // todo: push down into person itself. You should be able to request an authorization using basic auth with client id/secret
+        if (err) {
+            callback("Request authorization failed with error: "+err);
+        } else {
+            var options = {
+                    hostname: _this.config.persona_host,
+                    port: _this.config.persona_port,
+                    path: '/oauth/users/' + guid + '/authorizations/' + authorization_client_id,
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': 'Bearer ' + token.access_token,
+                        'Content-Type': 'application/json',
+                        'Content-Length': 0
+                    }
+                },
+                req = _this.http.request(options, function (resp) {
+                    if (resp.statusCode === 204) {
+                        callback(null);
+                    } else {
+                        var err = "Delete authorization failed with status code " + resp.statusCode;
+                        _this.error(err);
+                        callback(err);
+                    }
+                });
+            req.on("error", function (e) {
+                var err = "OAuth::deleteAuthorization problem: " + e.message;
+                _this.error(err);
+                callback(err);
+            });
+            req.end();
+        }
+    });
+};
+
+/**
  * Removes any tokens that are cached for the given id and secret
  * @param id
  * @param secret
  * @param callback
  * @private
  */
-PersonaClient.prototype._removeTokenFromCache = function (id,secret,callback) {
-    var cacheKey = "obtain_token:"+cryptojs.HmacSHA256(id, secret), _this = this;
-    _this.redisClient.del(cacheKey,function(err) {
-        _this.debug("Deleting "+cacheKey+" and retrying obtainToken..");
+PersonaClient.prototype._removeTokenFromCache = function (id, secret, callback) {
+    var cacheKey = "obtain_token:" + cryptojs.HmacSHA256(id, secret),
+        _this = this;
+    _this.redisClient.del(cacheKey, function (err) {
+        _this.debug("Deleting " + cacheKey + " and retrying obtainToken..");
         callback(err);
     });
 };
