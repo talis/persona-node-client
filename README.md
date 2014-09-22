@@ -46,7 +46,7 @@ Here we validate the token supplied using a specific scope (optional)
     app.post('/some/route', function(req,res) {
         req.personaClient.validateToken(req,res, function(){
            // you're good, do stuff
-        },"tdc:app:support");
+        },"some_scope");
     });
 ```
 
