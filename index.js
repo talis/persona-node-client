@@ -125,7 +125,7 @@ PersonaClient.prototype.validateToken = function (req, res, next, scope) {
                     _this.debug("Verification passed for token " + cacheKey + ", cached for 60s");
                     next(null, "verified_by_persona");
                 } else {
-                    if (usingScope && usingScope != "su") {
+                    if (usingScope && usingScope !== "su") {
                         // try su, they are allowed to perform any operation
                         _this.validateToken(req,res,next,"su");
                     } else {
@@ -494,7 +494,7 @@ PersonaClient.prototype.deleteAuthorization = function (guid, authorization_clie
     var _this = this;
     _this.obtainToken(id,secret,function(err,token) { // todo: push down into person itself. You should be able to request an authorization using basic auth with client id/secret
         if (err) {
-            callback("Request authorization failed with error: "+err,null);
+            callback("Request authorization failed with error: "+err);
         } else {
             var options = {
                     hostname: _this.config.persona_host,
@@ -508,37 +508,18 @@ PersonaClient.prototype.deleteAuthorization = function (guid, authorization_clie
                     }
                 },
                 req = _this.http.request(options, function (resp) {
-                    if (resp.statusCode === 200) {
-                        var str = '';
-                        resp.on("data", function (chunk) {
-                            str += chunk;
-                        });
-                        resp.on("end", function () {
-                            var data;
-                            try {
-                                data = JSON.parse(str);
-                            } catch (e) {
-                                callback("Error parsing response from persona: " + str, null);
-                                return;
-                            }
-                            if (data.error) {
-                                callback(data.error, null);
-                            } else if (data.client_id && data.client_secret) {
-                                callback(null, data);
-                            } else {
-                                callback("Could not delete authorization", null);
-                            }
-                        });
+                    if (resp.statusCode === 204) {
+                        callback(null);
                     } else {
                         var err = "Delete authorization failed with status code " + resp.statusCode;
                         _this.error(err);
-                        callback(err, null);
+                        callback(err);
                     }
                 });
             req.on("error", function (e) {
                 var err = "OAuth::deleteAuthorization problem: " + e.message;
                 _this.error(err);
-                callback(err, null);
+                callback(err);
             });
             req.end();
         }

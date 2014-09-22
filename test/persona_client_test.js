@@ -1304,11 +1304,10 @@ describe("Persona Client Test Suite", function(){
                 enable_debug: false
             });
 
-            personaClient.deleteAuthorization("guid", "authorization_client_id","some_id", "some_secret",function(err,data) {
+            personaClient.deleteAuthorization("guid", "authorization_client_id","some_id", "some_secret",function(err) {
                 assert(err!=null);
                 err.should.be.a.String;
                 err.should.equal("Request authorization failed with error: Generate token failed with status code 400");
-                assert(data===null);
                 done();
             });
         });
@@ -1327,17 +1326,16 @@ describe("Persona Client Test Suite", function(){
 
             // todo: how do I get a token without su scope? bah! Also fix persona first before enabling this test
             _getOAuthToken("invalid_scope",function(err,token) {
-                personaClient.deleteAuthorization("guid", "authorization_client_id","some_id", "some_secret",function(err,data) {
+                personaClient.deleteAuthorization("guid", "authorization_client_id","some_id", "some_secret",function(err) {
                     assert(err!=null);
                     err.should.be.a.String;
                     err.should.equal("Request authorization failed with status code 404");
-                    assert(data===null);
                     done();
                 });
             })
         });
 
-        it("should return 501 (will be 404) if user does not exist", function(done) {
+        it("should return 204 if user does not exist", function(done) {
             var personaClient = persona.createClient({
                 persona_host:"persona",
                 persona_port:80,
@@ -1349,16 +1347,13 @@ describe("Persona Client Test Suite", function(){
                 enable_debug: false
             });
 
-            personaClient.deleteAuthorization("guid_does_not_exist", "authorization_client_id","primate", "bananas",function(err,data) { //todo: move those credentials
-                assert(err!=null);
-                err.should.be.a.String;
-                err.should.equal("Delete authorization failed with status code 501");
-                assert(data===null);
+            personaClient.deleteAuthorization("guid_does_not_exist", "authorization_client_id","primate", "bananas",function(err) { //todo: move those credentials
+                assert(err==null);
                 done();
             });
         });
 
-        it("should return 501 (will be 204) if user does exist", function(done) {
+        it("should return 204 if user does exist", function(done) {
             var personaClient = persona.createClient({
                 persona_host:"persona",
                 persona_port:80,
@@ -1371,11 +1366,8 @@ describe("Persona Client Test Suite", function(){
             });
 
             // todo: how do a get a valid guid?
-            personaClient.deleteAuthorization("guid", "authorization_client_id","primate", "bananas",function(err,data) { //todo: move those credentials
-                assert(err!=null);
-                err.should.be.a.String;
-                err.should.equal("Delete authorization failed with status code 501");
-                assert(data===null);
+            personaClient.deleteAuthorization("guid", "authorization_client_id","primate", "bananas",function(err) { //todo: move those credentials
+                assert(err==null);
                 done();
             });
         });
