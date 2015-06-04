@@ -41,7 +41,7 @@ var PersonaClient = function (config) {
     this.config = config || {};
 
     var requiredAttributes = [
-        'persona_host', 'persona_port', 'persona_schema',
+        'persona_host', 'persona_port', 'persona_scheme',
         'persona_oauth_route', 'redis_host', 'redis_port',
         'redis_db'
     ];
