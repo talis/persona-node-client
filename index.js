@@ -117,7 +117,7 @@ PersonaClient.prototype.validateBearerToken = function(token, scope, overridingS
                     }
                 }
             }).on("error", function (e) {
-                _this.error("OAuth::validateToken problem: " + err.message);
+                _this.error("OAuth::validateToken problem: " + e.message);
                 next(e.message);
             }).end();
         }
