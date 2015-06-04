@@ -46,7 +46,9 @@ var PersonaClient = function (config) {
         'redis_db'
     ];
 
-    for (var attribute in requiredAttributes) {
+    for (var i = 0; i < requiredAttributes.length; i++) {
+        var attribute = requiredAttributes[i];
+
         if (this.config[attribute] === undefined) {
             var name = attribute.replace(/_/g, ' ');
             throw new Error("You must specify the " + name);
