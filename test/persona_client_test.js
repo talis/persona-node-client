@@ -528,7 +528,7 @@ describe("Persona Client Test Suite", function(){
             // the callback wont be called internally because this is middleware
             // therefore we need to call validate token and wait a couple of seconds for the
             // request to fail and asser the response object
-            personaClient.validateToken(req, res, null);
+            personaClient.validateHTTPBearerToken(req, res, null);
             setTimeout(function(){
                 res._statusWasCalled.should.equal(true);
                 res._jsonWasCalled.should.equal(true);
@@ -558,7 +558,7 @@ describe("Persona Client Test Suite", function(){
                 var req = _getStubRequest(token, null);
                 var res = _getStubResponse();
 
-                personaClient.validateToken(req, res, function(err, result){
+                personaClient.validateHTTPBearerToken(req, res, function(err, result){
                     assert.equal(res._statusWasCalled, false);
                     assert.equal(res._jsonWasCalled, false);
                     assert.equal(res._setWasCalled, false);
@@ -586,7 +586,7 @@ describe("Persona Client Test Suite", function(){
                 var req = _getStubRequest(token, "primate");
                 var res = _getStubResponse();
 
-                personaClient.validateToken(req, res, function(err, result){
+                personaClient.validateHTTPBearerToken(req, res, function(err, result){
                     assert.equal(res._statusWasCalled, false);
                     assert.equal(res._jsonWasCalled, false);
                     assert.equal(res._setWasCalled, false);
@@ -617,7 +617,7 @@ describe("Persona Client Test Suite", function(){
                         var req = _getStubRequest(token, null);
                         var res = _getStubResponse();
 
-                        personaClient.validateToken(req, res, function(err, result){
+                        personaClient.validateHTTPBearerToken(req, res, function(err, result){
                             assert.equal(res._statusWasCalled, false);
                             assert.equal(res._jsonWasCalled, false);
                             assert.equal(res._setWasCalled, false);
@@ -631,7 +631,7 @@ describe("Persona Client Test Suite", function(){
                         var req = _getStubRequest(token, null);
                         var res = _getStubResponse();
 
-                        personaClient.validateToken(req, res, function(err, result){
+                        personaClient.validateHTTPBearerToken(req, res, function(err, result){
                             assert.equal(res._statusWasCalled, false);
                             assert.equal(res._jsonWasCalled, false);
                             assert.equal(res._setWasCalled, false);
@@ -668,7 +668,7 @@ describe("Persona Client Test Suite", function(){
                         var req = _getStubRequest(token, "primate");
                         var res = _getStubResponse();
 
-                        personaClient.validateToken(req, res, function(err, result){
+                        personaClient.validateHTTPBearerToken(req, res, function(err, result){
                             assert.equal(res._statusWasCalled, false);
                             assert.equal(res._jsonWasCalled, false);
                             assert.equal(res._setWasCalled, false);
@@ -682,7 +682,7 @@ describe("Persona Client Test Suite", function(){
                         var req = _getStubRequest(token, "primate");
                         var res = _getStubResponse();
 
-                        personaClient.validateToken(req, res, function(err, result){
+                        personaClient.validateHTTPBearerToken(req, res, function(err, result){
                             if(err) return callback(err);
 
                             assert.equal(res._statusWasCalled, false);
@@ -721,7 +721,7 @@ describe("Persona Client Test Suite", function(){
                         var req = _getStubRequest(token, "primate");
                         var res = _getStubResponse();
 
-                        personaClient.validateToken(req, res, function(err, result){
+                        personaClient.validateHTTPBearerToken(req, res, function(err, result){
                             assert.equal(res._statusWasCalled, false);
                             assert.equal(res._jsonWasCalled, false);
                             assert.equal(res._setWasCalled, false);
@@ -735,7 +735,7 @@ describe("Persona Client Test Suite", function(){
                         var req = _getStubRequest(token, "wibble");
                         var res = _getStubResponse();
 
-                        personaClient.validateToken(req, res, null);
+                        personaClient.validateHTTPBearerToken(req, res, null);
                         setTimeout(function(){
                             res._statusWasCalled.should.equal(true);
                             res._jsonWasCalled.should.equal(true);
