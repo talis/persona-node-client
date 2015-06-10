@@ -1,4 +1,4 @@
-use strict';
+"use strict";
 
 var cryptojs = require('crypto-js'),
     url = require('url'),
@@ -145,7 +145,7 @@ PersonaClient.prototype.validateToken = function (token, scope, overridingScope,
 PersonaClient.prototype.validateHTTPBearerToken = function (req, res, next, scope) {
     var token = this.getToken(req);
 
-    this.validateBearerToken(token, req.param("scope"), scope, function (err, validatedBy) {
+    this.validateToken(token, req.param("scope"), scope, function (err, validatedBy) {
         if (!err) {
             next(null, validatedBy);
             return;
