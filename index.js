@@ -1,4 +1,4 @@
-'use strict';
+use strict';
 
 var cryptojs = require('crypto-js'),
     url = require('url'),
@@ -8,6 +8,11 @@ var cryptojs = require('crypto-js'),
 // log severities
 var DEBUG = "debug";
 var ERROR = "error";
+
+var VALIDATED_TYPES = {
+    PERSONA: "verified_by_persona",
+    CACHE: "verified_by_cache",
+};
 
 var ERROR_TYPES = {
     VALIDATION_FAILURE : "validation_failure",
@@ -66,9 +71,16 @@ var PersonaClient = function (config) {
     this.debug("Persona Client Created");
 };
 
-PersonaClient.prototype.validateBearerToken = function(token, scope, overridingScope, next) {
+/**
+ * Validate bearer token against cache or persona
+ * @param token: Token to validate
+ * @param scope: Requested scope
+ * @param overrideScope: Backup scope to use instead of scope
+ * @param next: Callback, function(err, validatedBy)
+ */
+PersonaClient.prototype.validateToken = function (token, scope, overridingScope, next) {
     if (token == null) {
-        next(ERROR_TYPES.INVALID_TOKEN);
+        next(ERROR_TYPES.INVALID_TOKEN, null);
         return;
     }
 
@@ -81,7 +93,7 @@ PersonaClient.prototype.validateBearerToken = function(token, scope, overridingS
     this.redisClient.get("access_token:" + cacheKey, function (err, reply) {
         if (reply === "OK") {
             _this.debug("Token " + cacheKey + " verified by cache");
-            next(null);
+            next(null, VALIDATED_TYPES.CACHE);
         } else {
             var requestPath = _this.config.persona_oauth_route + token;
             var usingScope = scope || overridingScope || null;
@@ -106,19 +118,19 @@ PersonaClient.prototype.validateBearerToken = function(token, scope, overridingS
                         _this.debug("cache: " + JSON.stringify(err) + JSON.stringify(results));
                     });
                     _this.debug("Verification passed for token " + cacheKey + ", cached for 60s");
-                    next(null);
+                    next(null, VALIDATED_TYPES.PERSONA);
                 } else {
                     if (usingScope && usingScope !== "su") {
                         // try su, they are allowed to perform any operation
-                        _this.validateBearerToken(token, "su", overridingScope, next);
+                        _this.validateToken (token, "su", overridingScope, next);
                     } else {
                         _this.debug("Verification failed for token " + cacheKey + " with status code " + oauthResp.statusCode);
-                        next(ERROR_TYPES.VALIDATION_FAILURE);
+                        next(ERROR_TYPES.VALIDATION_FAILURE, null);
                     }
                 }
-            }).on("error", function (e) {
+            }).on ("error", function (e) {
                 _this.error("OAuth::validateToken problem: " + e.message);
-                next(e.message);
+                next(e.message, null);
             }).end();
         }
     });
@@ -130,14 +142,12 @@ PersonaClient.prototype.validateBearerToken = function(token, scope, overridingS
  * @param res
  * @param next
  */
-PersonaClient.prototype.validateToken = function (req, res, next, scope) {
+PersonaClient.prototype.validateHTTPBearerToken = function (req, res, next, scope) {
     var token = this.getToken(req);
 
-    this.validateBearerToken(token, req.param("scope"), scope, function(err) {
+    this.validateBearerToken(token, req.param("scope"), scope, function (err, validatedBy) {
         if (!err) {
-            // TODO: do we need a success msg?
-            // TODO: does the other end need to know if it was cache or not?
-            next(null, "verified_by_persona");
+            next(null, validatedBy);
             return;
         }
 
@@ -432,7 +442,7 @@ PersonaClient.prototype.requestAuthorization = function (guid, title, id, secret
     }
 
     var _this = this;
-    _this.obtainToken(id,secret,function(err,token) { // todo: push down into person itself. You should be able to request an authorization using basic auth with client id/secret
+    _this.obtainToken (id,secret,function (err,token) { // todo: push down into person itself. You should be able to request an authorization using basic auth with client id/secret
         if (err) {
             callback("Request authorization failed with error: "+err,null);
         } else {
@@ -509,7 +519,7 @@ PersonaClient.prototype.deleteAuthorization = function (guid, authorization_clie
     }
 
     var _this = this;
-    _this.obtainToken(id,secret,function(err,token) { // todo: push down into person itself. You should be able to request an authorization using basic auth with client id/secret
+    _this.obtainToken(id,secret,function (err,token) { // todo: push down into person itself. You should be able to request an authorization using basic auth with client id/secret
         if (err) {
             callback("Request authorization failed with error: "+err);
         } else {
