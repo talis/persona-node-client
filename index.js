@@ -1,4 +1,4 @@
-'use strict';
+"use strict";
 
 var cryptojs = require('crypto-js'),
     url = require('url'),
@@ -8,6 +8,17 @@ var cryptojs = require('crypto-js'),
 // log severities
 var DEBUG = "debug";
 var ERROR = "error";
+
+var VALIDATED_TYPES = {
+    PERSONA: "verified_by_persona",
+    CACHE: "verified_by_cache",
+};
+
+var ERROR_TYPES = {
+    VALIDATION_FAILURE : "validation_failure",
+    COMMUNICATION_ISSUE :"communication_issue",
+    INVALID_TOKEN : "invalid_token"
+};
 
 /**
  * Constructor you must pass in a config object with the following properties set:
@@ -34,30 +45,21 @@ var ERROR = "error";
 var PersonaClient = function (config) {
     this.config = config || {};
 
-    //TODO: find a less verbose way of doing this
+    var requiredAttributes = [
+        'persona_host', 'persona_port', 'persona_scheme',
+        'persona_oauth_route', 'redis_host', 'redis_port',
+        'redis_db'
+    ];
 
-    if (this.config.persona_host === undefined) {
-        throw new Error("You must specify the Persona server host");
-    }
-    if (this.config.persona_port === undefined) {
-        throw new Error("You must specify the Persona server port");
-    }
-    if (this.config.persona_scheme === undefined) {
-        throw new Error("You must specify the Persona server scheme (http/https)");
-    }
-    if (this.config.persona_oauth_route === undefined) {
-        throw new Error("You must specify the Persona oauth route");
+    for (var i = 0; i < requiredAttributes.length; i++) {
+        var attribute = requiredAttributes[i];
+
+        if (this.config[attribute] === undefined) {
+            var name = attribute.replace(/_/g, ' ');
+            throw new Error("You must specify the " + name);
+        }
     }
 
-    if (this.config.redis_host === undefined) {
-        throw new Error("You must specify the Redis host to use as a cache");
-    }
-    if (this.config.redis_port === undefined) {
-        throw new Error("You must specify the Redis port");
-    }
-    if (this.config.redis_db === undefined) {
-        throw new Error("You must specify the Redis db");
-    }
     // connect to redis and switch to the configured db
     var redis = require('redis');
     this.redisClient = redis.createClient(this.config.redis_port, this.config.redis_host);
@@ -70,40 +72,35 @@ var PersonaClient = function (config) {
 };
 
 /**
- * Express middleware that can be used to verify a token
- * @param req
- * @param res
- * @param next
+ * Validate bearer token against cache or persona
+ * @param token: Token to validate
+ * @param scope: Requested scope
+ * @param overrideScope: Backup scope to use instead of scope
+ * @param next: Callback, function(err, validatedBy)
  */
-PersonaClient.prototype.validateToken = function (req, res, next, scope) {
-    var token = this.getToken(req),
-        _this = this;
+PersonaClient.prototype.validateToken = function (token, scope, overridingScope, next) {
+    if (!next) {
+        throw "No callback (next attribute) provided";
+    }
 
     if (token == null) {
-        res.status(401);
-        res.json({
-            "error": "no_token",
-            "error_description": "No token supplied"
-        });
-        throw "OAuth validation failed for " + token;
+        next(ERROR_TYPES.INVALID_TOKEN, null);
+        return;
     }
 
+    var _this = this,
+        cacheKey = token + ((scope) ? "@" + scope : "");
     // if we were given a scope then append the scope to the token to create a cachekey
-    var cacheKey = token;
-    if (req.param("scope")) {
-        cacheKey += "@" + req.param("scope");
-    }
 
     this.debug("Validating token: " + cacheKey);
-
     this.redisClient.get("access_token:" + cacheKey, function (err, reply) {
         if (reply === "OK") {
             _this.debug("Token " + cacheKey + " verified by cache");
-            next(null, "verified_by_cache");
+            next(null, VALIDATED_TYPES.CACHE);
         } else {
-
             var requestPath = _this.config.persona_oauth_route + token;
-            var usingScope = scope || req.param("scope") || null;
+            var usingScope = scope || overridingScope || null;
+
             if (usingScope != null) {
                 requestPath += "?scope=" + usingScope;
             }
@@ -116,6 +113,7 @@ PersonaClient.prototype.validateToken = function (req, res, next, scope) {
             };
 
             _this.debug(JSON.stringify(options));
+
             _this.http.request(options, function (oauthResp) {
                 if (oauthResp.statusCode === 204) {
                     // put this key in redis with an expire
@@ -123,33 +121,65 @@ PersonaClient.prototype.validateToken = function (req, res, next, scope) {
                         _this.debug("cache: " + JSON.stringify(err) + JSON.stringify(results));
                     });
                     _this.debug("Verification passed for token " + cacheKey + ", cached for 60s");
-                    next(null, "verified_by_persona");
+                    next(null, VALIDATED_TYPES.PERSONA);
                 } else {
                     if (usingScope && usingScope !== "su") {
                         // try su, they are allowed to perform any operation
-                        _this.validateToken(req,res,next,"su");
+                        _this.validateToken (token, "su", overridingScope, next);
                     } else {
                         _this.debug("Verification failed for token " + cacheKey + " with status code " + oauthResp.statusCode);
-                        res.status(401);
-                        res.set("Connection", "close");
-                        res.json({
-                            "error": "invalid_token",
-                            "error_description": "The token is invalid or has expired"
-                        });
+                        next(ERROR_TYPES.VALIDATION_FAILURE, null);
                     }
                 }
-            }).on("error", function (e) {
+            }).on ("error", function (e) {
                 _this.error("OAuth::validateToken problem: " + e.message);
-                res.status(500);
-                res.set("Connection", "close");
-                res.json({
-                    "error": "unexpected_error",
-                    "error_description": e.message
-                });
+                next(e.message, null);
             }).end();
         }
     });
+};
 
+/**
+ * Express middleware that can be used to verify a token
+ * @param req
+ * @param res
+ * @param next
+ */
+PersonaClient.prototype.validateHTTPBearerToken = function (req, res, next, scope) {
+    var token = this.getToken(req);
+
+    this.validateToken(token, req.param("scope"), scope, function (err, validatedBy) {
+        if (!err) {
+            next(null, validatedBy);
+            return;
+        }
+
+        switch(err) {
+        case ERROR_TYPES.INVALID_TOKEN:
+            res.status(401);
+            res.json({
+                "error": "no_token",
+                "error_description": "No token supplied"
+            });
+
+            throw "OAuth validation failed for " + token;
+        case ERROR_TYPES.VALIDATION_FAILURE:
+            res.status(401);
+            res.set("Connection", "close");
+            res.json({
+                "error": "invalid_token",
+                "error_description": "The token is invalid or has expired"
+            });
+            break;
+        default:
+            res.status(500);
+            res.set("Connection", "close");
+            res.json({
+                "error": "unexpected_error",
+                "error_description": err
+            });
+        }
+    });
 };
 
 /**
@@ -329,7 +359,7 @@ PersonaClient.prototype.obtainToken = function (id, secret, callback) {
                                 // cache token
                                 var cacheFor = data.expires_in - 60, // cache for token validity minus 60s
                                     now = (new Date().getTime() / 1000);
-                                data['expires_at'] = now + data.expires_in;
+                                data.expires_at = now + data.expires_in;
                                 if (cacheFor > 0) {
                                     _this.redisClient.multi().set(cacheKey, JSON.stringify(data)).expire(cacheKey, cacheFor).exec(function (err) {
                                         if (err) {
@@ -415,7 +445,7 @@ PersonaClient.prototype.requestAuthorization = function (guid, title, id, secret
     }
 
     var _this = this;
-    _this.obtainToken(id,secret,function(err,token) { // todo: push down into person itself. You should be able to request an authorization using basic auth with client id/secret
+    _this.obtainToken (id,secret,function (err,token) { // todo: push down into person itself. You should be able to request an authorization using basic auth with client id/secret
         if (err) {
             callback("Request authorization failed with error: "+err,null);
         } else {
@@ -492,7 +522,7 @@ PersonaClient.prototype.deleteAuthorization = function (guid, authorization_clie
     }
 
     var _this = this;
-    _this.obtainToken(id,secret,function(err,token) { // todo: push down into person itself. You should be able to request an authorization using basic auth with client id/secret
+    _this.obtainToken(id,secret,function (err,token) { // todo: push down into person itself. You should be able to request an authorization using basic auth with client id/secret
         if (err) {
             callback("Request authorization failed with error: "+err);
         } else {

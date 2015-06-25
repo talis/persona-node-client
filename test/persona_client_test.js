@@ -19,14 +19,14 @@ describe("Persona Client Test Suite", function(){
             var personaClient = function(){
                 return persona.createClient({});
             };
-            personaClient.should.throw("You must specify the Persona server host");
+            personaClient.should.throw("You must specify the persona host");
             done();
         });
         it("should throw error if config.persona_port is not supplied", function(done){
             var personaClient = function(){
                 return persona.createClient({persona_host:"persona"});
             };
-            personaClient.should.throw("You must specify the Persona server port");
+            personaClient.should.throw("You must specify the persona port");
             done();
         });
         it("should throw error if config.persona_scheme is not supplied", function(done){
@@ -36,7 +36,7 @@ describe("Persona Client Test Suite", function(){
                     persona_port:80
                 });
             };
-            personaClient.should.throw("You must specify the Persona server scheme (http/https)");
+            personaClient.should.throw("You must specify the persona scheme");
             done();
         });
         it("should throw error if config.persona_oauth_route is not supplied", function(done){
@@ -47,7 +47,7 @@ describe("Persona Client Test Suite", function(){
                     persona_scheme:"http"
                 });
             };
-            personaClient.should.throw("You must specify the Persona oauth route");
+            personaClient.should.throw("You must specify the persona oauth route");
             done();
         });
         it("should throw error if config.redis_host is not supplied", function(done){
@@ -59,7 +59,7 @@ describe("Persona Client Test Suite", function(){
                     persona_oauth_route:"/oauth/tokens"
                 });
             };
-            personaClient.should.throw("You must specify the Redis host to use as a cache");
+            personaClient.should.throw("You must specify the redis host");
             done();
         });
         it("should throw error if config.redis_port is not supplied", function(done){
@@ -72,7 +72,7 @@ describe("Persona Client Test Suite", function(){
                     redis_host:"persona"
                 });
             };
-            personaClient.should.throw("You must specify the Redis port");
+            personaClient.should.throw("You must specify the redis port");
             done();
         });
         it("should throw error if config.redis_db is not supplied", function(done){
@@ -86,7 +86,7 @@ describe("Persona Client Test Suite", function(){
                     redis_port:6379
                 });
             };
-            personaClient.should.throw("You must specify the Redis db");
+            personaClient.should.throw("You must specify the redis db");
             done();
         });
         it("should NOT throw any error if all config params are defined", function(done){
@@ -528,7 +528,7 @@ describe("Persona Client Test Suite", function(){
             // the callback wont be called internally because this is middleware
             // therefore we need to call validate token and wait a couple of seconds for the
             // request to fail and asser the response object
-            personaClient.validateToken(req, res, null);
+            personaClient.validateHTTPBearerToken(req, res, null);
             setTimeout(function(){
                 res._statusWasCalled.should.equal(true);
                 res._jsonWasCalled.should.equal(true);
@@ -558,7 +558,7 @@ describe("Persona Client Test Suite", function(){
                 var req = _getStubRequest(token, null);
                 var res = _getStubResponse();
 
-                personaClient.validateToken(req, res, function(err, result){
+                personaClient.validateHTTPBearerToken(req, res, function(err, result){
                     assert.equal(res._statusWasCalled, false);
                     assert.equal(res._jsonWasCalled, false);
                     assert.equal(res._setWasCalled, false);
@@ -586,7 +586,7 @@ describe("Persona Client Test Suite", function(){
                 var req = _getStubRequest(token, "primate");
                 var res = _getStubResponse();
 
-                personaClient.validateToken(req, res, function(err, result){
+                personaClient.validateHTTPBearerToken(req, res, function(err, result){
                     assert.equal(res._statusWasCalled, false);
                     assert.equal(res._jsonWasCalled, false);
                     assert.equal(res._setWasCalled, false);
@@ -617,7 +617,7 @@ describe("Persona Client Test Suite", function(){
                         var req = _getStubRequest(token, null);
                         var res = _getStubResponse();
 
-                        personaClient.validateToken(req, res, function(err, result){
+                        personaClient.validateHTTPBearerToken(req, res, function(err, result){
                             assert.equal(res._statusWasCalled, false);
                             assert.equal(res._jsonWasCalled, false);
                             assert.equal(res._setWasCalled, false);
@@ -631,7 +631,7 @@ describe("Persona Client Test Suite", function(){
                         var req = _getStubRequest(token, null);
                         var res = _getStubResponse();
 
-                        personaClient.validateToken(req, res, function(err, result){
+                        personaClient.validateHTTPBearerToken(req, res, function(err, result){
                             assert.equal(res._statusWasCalled, false);
                             assert.equal(res._jsonWasCalled, false);
                             assert.equal(res._setWasCalled, false);
@@ -668,7 +668,7 @@ describe("Persona Client Test Suite", function(){
                         var req = _getStubRequest(token, "primate");
                         var res = _getStubResponse();
 
-                        personaClient.validateToken(req, res, function(err, result){
+                        personaClient.validateHTTPBearerToken(req, res, function(err, result){
                             assert.equal(res._statusWasCalled, false);
                             assert.equal(res._jsonWasCalled, false);
                             assert.equal(res._setWasCalled, false);
@@ -682,7 +682,7 @@ describe("Persona Client Test Suite", function(){
                         var req = _getStubRequest(token, "primate");
                         var res = _getStubResponse();
 
-                        personaClient.validateToken(req, res, function(err, result){
+                        personaClient.validateHTTPBearerToken(req, res, function(err, result){
                             if(err) return callback(err);
 
                             assert.equal(res._statusWasCalled, false);
@@ -721,7 +721,7 @@ describe("Persona Client Test Suite", function(){
                         var req = _getStubRequest(token, "primate");
                         var res = _getStubResponse();
 
-                        personaClient.validateToken(req, res, function(err, result){
+                        personaClient.validateHTTPBearerToken(req, res, function(err, result){
                             assert.equal(res._statusWasCalled, false);
                             assert.equal(res._jsonWasCalled, false);
                             assert.equal(res._setWasCalled, false);
@@ -735,7 +735,7 @@ describe("Persona Client Test Suite", function(){
                         var req = _getStubRequest(token, "wibble");
                         var res = _getStubResponse();
 
-                        personaClient.validateToken(req, res, null);
+                        personaClient.validateHTTPBearerToken(req, res, null);
                         setTimeout(function(){
                             res._statusWasCalled.should.equal(true);
                             res._jsonWasCalled.should.equal(true);
