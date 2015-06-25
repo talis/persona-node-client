@@ -79,17 +79,20 @@ var PersonaClient = function (config) {
  * @param next: Callback, function(err, validatedBy)
  */
 PersonaClient.prototype.validateToken = function (token, scope, overridingScope, next) {
+    if (!next) {
+        throw "No callback (next attribute) provided";
+    }
+
     if (token == null) {
         next(ERROR_TYPES.INVALID_TOKEN, null);
         return;
     }
 
-    var _this = this;
-
+    var _this = this,
+        cacheKey = token + ((scope) ? "@" + scope : "");
     // if we were given a scope then append the scope to the token to create a cachekey
-    var cacheKey = token + ((scope) ? "@" + scope : "");
-    this.debug("Validating token: " + cacheKey);
 
+    this.debug("Validating token: " + cacheKey);
     this.redisClient.get("access_token:" + cacheKey, function (err, reply) {
         if (reply === "OK") {
             _this.debug("Token " + cacheKey + " verified by cache");
