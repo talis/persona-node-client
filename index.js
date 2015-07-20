@@ -11,7 +11,7 @@ var ERROR = "error";
 
 var VALIDATED_TYPES = {
     PERSONA: "verified_by_persona",
-    CACHE: "verified_by_cache",
+    CACHE: "verified_by_cache"
 };
 
 var ERROR_TYPES = {
@@ -556,6 +556,159 @@ PersonaClient.prototype.deleteAuthorization = function (guid, authorization_clie
     });
 };
 
+/**
+ * Update a users profile
+ * @param {string} guid
+ * @param {object} profile Profile data - must be an object containing profile params
+ * @param {string} token
+ * @callback callback
+ */
+PersonaClient.prototype.updateProfile = function(guid, profile, token, callback){
+
+    try {
+        _.map([guid, token], function (arg) {
+            if (!_.isString(arg)) {
+               throw "guid and token are required strings";
+            }
+        });
+        _.map([profile], function (arg) {
+            if (!_.isObject(arg)) {
+                throw "profile is a required object";
+            }
+        });
+
+    } catch (e) {
+        callback(e,null);
+        return;
+    }
+
+    var _this = this;
+    // Get a profile
+    var profileData = JSON.stringify(profile),
+        options = {
+            hostname: _this.config.persona_host,
+            port: _this.config.persona_port,
+            path: '/users/' + guid + '/profile',
+            method: 'PUT',
+            headers: {
+                'Authorization': 'Bearer ' + token
+            },
+            data:{
+               profile:JSON.stringify(profile)
+            }
+        },
+        req = _this.http.request(options, function (resp) {
+            if (resp.statusCode === 200) {
+
+                var str = '';
+                resp.on("data", function (chunk) {
+                    str += chunk;
+                });
+                resp.on("end", function () {
+                    var data;
+                    try {
+                        data = JSON.parse(str);
+                    } catch (e) {
+                        callback("Error parsing response from persona: " + str, null);
+                        return;
+                    }
+
+                    if(data){
+                        if (data.error) {
+                            callback(data.error, null);
+                        } else if (data) {
+                            callback(null, data);
+                        }
+                    } else {
+                        callback("Could not update Profile", null);
+                    }
+                });
+            } else {
+                var err = "updateProfile failed with status code " + resp.statusCode;
+                _this.error(err);
+                callback(err, null);
+            }
+      });
+
+    req.on("error", function (e) {
+        var err = "updateProfile problem: " + e.message;
+        _this.error(err);
+        callback(err, null);
+    });
+    req.write(profileData);
+    req.end();
+};
+
+/**
+ * Get a user profile by a GUID
+ * @param {string} guid
+ * @param {string} token
+ * @callback callback
+ */
+PersonaClient.prototype.getProfileByGuid = function(guid, token, callback){
+
+    try {
+        _.map([guid, token], function (arg) {
+            if (!_.isString(arg)) {
+                throw "guid and token are required strings";
+            }
+        });
+    } catch (e) {
+        callback(e,null);
+        return;
+    }
+
+    var _this = this;
+    // Get a profile
+    var options = {
+        hostname: _this.config.persona_host,
+        port: _this.config.persona_port,
+        path: '/users/' + (_.isArray(guid) ? guid.join(',') : guid),
+        method: 'GET',
+        headers: {
+           'Authorization': 'Bearer ' + token
+        }
+    },
+    req = _this.http.request(options, function (resp) {
+        if (resp.statusCode === 200) {
+
+            var str = '';
+            resp.on("data", function (chunk) {
+                str += chunk;
+            });
+            resp.on("end", function () {
+                var data;
+                try {
+                    data = JSON.parse(str);
+                } catch (e) {
+                    callback("Error parsing response from persona: " + str, null);
+                    return;
+                }
+
+                if(data){
+                  if (data.error) {
+                      callback(data.error, null);
+                  } else {
+                     callback(null, data);
+                  }
+                } else {
+                    callback("Could not get Profile By Guid", null);
+                }
+            });
+        } else {
+          var err = "getProfileByGuid failed with status code " + resp.statusCode;
+          _this.error(err);
+          callback(err, null);
+        }
+    });
+
+    req.on("error", function (e) {
+        var err = "getProfileByGuid problem: " + e.message;
+        _this.error(err);
+        callback(err, null);
+    });
+    req.end();
+};
 /**
  * Removes any tokens that are cached for the given id and secret
  * @param id
