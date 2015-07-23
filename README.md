@@ -1,10 +1,10 @@
-Node Client for Persona, repsonsible for retrieving, generating, caching and validating OAuth Tokens.
+Node Client for Persona, responsible for retrieving, generating, caching and validating OAuth Tokens.
 
 ## Getting Started
 Install the module by adding the following line to `packages.json`: 
 
 ```
-    "persona_client": "git://github.com/talis/persona-node-client.git#0.3.0"
+    "persona_client": "git://github.com/talis/persona-node-client.git#1.1.0"
 ```
 
 Create a persona client as follows:
@@ -44,13 +44,13 @@ Here we validate the token supplied using a specific scope (optional)
      * Check if a user is allowed to impersonate another, and logs it
      */
     app.post('/some/route', function(req,res) {
-        req.personaClient.validateToken(req,res, function(){
+        req.personaClient.validateHTTPBearerToken(req,res, function(){
            // you're good, do stuff
         },"some_scope");
     });
 ```
 
-If the validation fails, `401` will be returned automatically.
+If the validation fails, `401` will be returned to the client automatically.
 
 
 ### Pre-signing signing urls
@@ -85,7 +85,26 @@ Deleting:
   personaClient.deleteAuthorization('user_guid', 'Required for access to admin', 'client_id', 'client_secret', function(err) {
     // do stuff
   });
+```
 
+### Getting a user profile
+
+Via guid:
+
+```javascript
+  personaClient.getProfileByGuid ('user_guid', 'token', function(err, user) {
+    // do stuff
+    var profile = user.profile;
+  });
+```
+
+### Updating a user profile
+
+```javascript
+  personaClient.updateProfile('user_guid', {first_name:'Max',surname:'Payne'} 'token', function(err, user) {
+    // do stuff
+    var profile = user.profile;
+  });
 ```
 
 ## Contributing
@@ -93,7 +112,9 @@ In lieu of a formal styleguide, take care to maintain the existing coding style.
 
 ## Release History
 
+1.1.0 - Added methods for getting and updating a user profile
+1.0.0 - Breaking change to existing functionality: The method validateToken is now called validateHTTPBearerToken. The validateToken method validates a token against Persona, while the validateHTTPBearerToken method validates a token that originates from a http call (one of the attributes required is a http request object).
 0.3.0 - added the ability to request/delete client authorizations, and fixed scoping issue on validation.
 
 ## License
-Copyright (c) 2013 Talis Education Limited.
+Copyright (c) 2015 Talis Education Limited.
