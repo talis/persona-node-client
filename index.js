@@ -161,8 +161,7 @@ PersonaClient.prototype.validateHTTPBearerToken = function (req, res, next, scop
                 "error": "no_token",
                 "error_description": "No token supplied"
             });
-
-            throw "OAuth validation failed for " + token;
+            break;
         case ERROR_TYPES.VALIDATION_FAILURE:
             res.status(401);
             res.set("Connection", "close");
