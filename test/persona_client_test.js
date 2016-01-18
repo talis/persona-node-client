@@ -742,9 +742,9 @@ describe("Persona Client Test Suite", function(){
                             res._jsonWasCalled.should.equal(true);
                             res._setWasCalled.should.equal(true);
 
-                            res._status.should.equal(401);
-                            res._json.error.should.equal("invalid_token");
-                            res._json.error_description.should.equal("The token is invalid or has expired");
+                            res._status.should.equal(403);
+                            res._json.error.should.equal("insufficient_scope");
+                            res._json.error_description.should.equal("The token has insufficient scope");
 
                             callback(null, "done");
                         },4000);
@@ -752,6 +752,116 @@ describe("Persona Client Test Suite", function(){
                 ], function(err, result){
                     if(err) return done(err);
 
+                    done();
+                });
+            });
+        });
+
+       it("should correctly validate an invalid scoped token - Persona route version 1 - should return 401", function(done){
+            // use _getOAuthToken to generate a token outside of the node client
+
+            _getOAuthToken("primate", function(err, token){
+                var personaClient = persona.createClient({
+                    persona_host:"persona",
+                    persona_port:80,
+                    persona_scheme:"http",
+                    persona_oauth_route:"/1/oauth/tokens/",
+                    redis_host:"localhost",
+                    redis_port:6379,
+                    redis_db:0,
+                    enable_debug: false
+                });
+
+                var req = _getStubRequest(token, "fred");
+                var res = _getStubResponse();
+
+                personaClient.validateHTTPBearerToken(req, res, null);
+                setTimeout(function(){
+                    res._statusWasCalled.should.equal(true);
+                    res._jsonWasCalled.should.equal(true);
+                    res._setWasCalled.should.equal(true);
+
+                    res._status.should.equal(401);
+                    res._json.error.should.equal("invalid_token");
+                    res._json.error_description.should.equal("The token is invalid or has expired");
+
+                    done();
+                },4000);
+            });
+        });
+
+       it("should correctly validate an invalid scoped token - Persona route version 2 - should return 403", function(done){
+            // use _getOAuthToken to generate a token outside of the node client
+
+            _getOAuthToken("primate", function(err, token){
+                var personaClient = persona.createClient({
+                    persona_host:"persona",
+                    persona_port:80,
+                    persona_scheme:"http",
+                    persona_oauth_route:"/oauth/tokens/",
+                    redis_host:"localhost",
+                    redis_port:6379,
+                    redis_db:0,
+                    enable_debug: false
+                });
+
+                var req = _getStubRequest(token, "fred");
+                var res = _getStubResponse();
+
+                personaClient.validateHTTPBearerToken(req, res, null);
+                setTimeout(function(){
+                    res._statusWasCalled.should.equal(true);
+                    res._jsonWasCalled.should.equal(true);
+                    res._setWasCalled.should.equal(true);
+
+                    res._status.should.equal(403);
+                    res._json.error.should.equal("insufficient_scope");
+                    res._json.error_description.should.equal("The token has insufficient scope");
+
+                    done();
+                },4000);
+            });
+        });
+
+       it("validateToken: should correctly validate an invalid scoped token - Persona route version 1 - should return validation_failure", function(done){
+            // use _getOAuthToken to generate a token outside of the node client
+
+            _getOAuthToken("primate", function(err, token){
+                var personaClient = persona.createClient({
+                    persona_host:"persona",
+                    persona_port:80,
+                    persona_scheme:"http",
+                    persona_oauth_route:"/1/oauth/tokens/",
+                    redis_host:"localhost",
+                    redis_port:6379,
+                    redis_db:0,
+                    enable_debug: false
+                });
+
+                personaClient.validateToken(token, "fred", null, function(err) {
+                    err.should.equal("validation_failure");
+                    done();
+                });
+            });
+        });
+
+       it("validateToken: should correctly validate an invalid scoped token - Persona route version 2 - should return insufficient_scope", function(done){
+            // use _getOAuthToken to generate a token outside of the node client
+
+            _getOAuthToken("primate", function(err, token){
+                var personaClient = persona.createClient({
+                    persona_host:"persona",
+                    persona_port:80,
+                    persona_scheme:"http",
+                    persona_oauth_route:"/oauth/tokens/",
+                    redis_host:"localhost",
+                    redis_port:6379,
+                    redis_db:0,
+                    enable_debug: false
+                });
+
+                personaClient.validateToken(token, "fred", null, function(err) {
+                    err.should.equal("insufficient_scope");
                     done();
                 });
             });
@@ -1484,9 +1594,11 @@ describe("Persona Client Test Suite", function(){
 
             var expected = {guid:'123',profile: {first_name:'Max', surname:'Payne'}};
             var response = new PassThrough();
+
             response.statusCode = 200;
             response.write(JSON.stringify(expected));
             response.end();
+
             var request = new PassThrough();
 
             var personaClient = persona.createClient({
@@ -1499,7 +1611,14 @@ describe("Persona Client Test Suite", function(){
                 redis_db:0,
                 enable_debug: false
               });
+
             requestStub.callsArgWith(1, response).returns(request);
+
+            // stub out the call to get obtainToken by providing a fake redisClient that returns known data
+            var now = new Date().getTime() / 1000;
+            var reply = {access_token: 'thisisatoken', expires_at: now + 1000};
+
+            sinon.stub(personaClient.redisClient, "get").callsArgWith(1,null,JSON.stringify(reply));
 
             personaClient.obtainToken("primate","bananas",function(err,data1) {
                 personaClient.getProfileByGuid('guid_does_exist', data1.access_token, function(err, data){
@@ -1511,6 +1630,7 @@ describe("Persona Client Test Suite", function(){
                     data.should.eql(expected);
 
                     http.request.restore();
+                    personaClient.redisClient.get.restore();
                     done();
                 });
             });
@@ -1661,6 +1781,12 @@ describe("Persona Client Test Suite", function(){
             });
             requestStub.callsArgWith(1, response).returns(request);
 
+            // stub out the call to get obtainToken by providing a fake redisClient that returns known data
+            var now = new Date().getTime() / 1000;
+            var reply = {access_token: 'thisisatoken', expires_at: now + 1000};
+
+            sinon.stub(personaClient.redisClient, "get").callsArgWith(1,null,JSON.stringify(reply));
+
             personaClient.obtainToken("primate","bananas",function(err,data1) {
                 personaClient.updateProfile('guid_does_exist', expected.profile, data1.access_token, function(err, data){
                     assert(err===null);
@@ -1670,6 +1796,7 @@ describe("Persona Client Test Suite", function(){
                     data.should.eql(expected);
 
                     http.request.restore();
+                    personaClient.redisClient.get.restore();
                     done();
                 });
             });
