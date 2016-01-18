@@ -744,7 +744,7 @@ describe("Persona Client Test Suite", function(){
 
                             res._status.should.equal(403);
                             res._json.error.should.equal("insufficient_scope");
-                            res._json.error_description.should.equal("The token has insufficient scope");
+                            res._json.error_description.should.equal("The supplied token is missing a required scope");
 
                             callback(null, "done");
                         },4000);
@@ -816,7 +816,7 @@ describe("Persona Client Test Suite", function(){
 
                     res._status.should.equal(403);
                     res._json.error.should.equal("insufficient_scope");
-                    res._json.error_description.should.equal("The token has insufficient scope");
+                    res._json.error_description.should.equal("The supplied token is missing a required scope");
 
                     done();
                 },4000);
@@ -917,7 +917,7 @@ describe("Persona Client Test Suite", function(){
             validateUrl.should.throw("You must provide a secret to obtain a token");
             done();
         });
-        it.only("should return a token, and cache that token",function(done) {
+        it("should return a token, and cache that token",function(done) {
             global.http = require('http');
             var requestStub = sinon.stub(http, 'request');
 
