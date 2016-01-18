@@ -179,7 +179,7 @@ PersonaClient.prototype.validateHTTPBearerToken = function (req, res, next, scop
             res.set("Connection", "close");
             res.json({
                 "error": "insufficient_scope",
-                "error_description": "The token has insufficient scope"
+                "error_description": "The supplied token is missing a required scope"
             });
             break;
         default:
@@ -415,9 +415,6 @@ PersonaClient.prototype.obtainToken = function (id, secret, callback) {
                     if (expiresIn > 0) {
                         data.expires_in = expiresIn;
                         callback(null, data);
-                        return;
-                    } else {
-                        callback("Error with cached token expires_at value", null);
                         return;
                     }
                 }
