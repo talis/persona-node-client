@@ -152,7 +152,6 @@ PersonaClient.prototype.validateToken = function (token, scope, overridingScope,
  */
 PersonaClient.prototype.validateHTTPBearerToken = function (req, res, next, scope) {
     var token = this.getToken(req);
-
     this.validateToken(token, req.param("scope"), scope, function (err, validatedBy) {
         if (!err) {
             next(null, validatedBy);
@@ -350,7 +349,6 @@ PersonaClient.prototype.obtainToken = function (id, secret, callback) {
                             'Content-Length': post_data.length
                         }
                     };
-
                 var req = _this.http.request(options, function (resp) {
                     if (resp.statusCode === 200) {
                         var str = '';
@@ -417,6 +415,9 @@ PersonaClient.prototype.obtainToken = function (id, secret, callback) {
                     if (expiresIn > 0) {
                         data.expires_in = expiresIn;
                         callback(null, data);
+                        return;
+                    } else {
+                        callback("Error with cached token expires_at value", null);
                         return;
                     }
                 }
