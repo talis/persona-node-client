@@ -761,6 +761,11 @@ describe("Persona Client Test Suite", function(){
             // use _getOAuthToken to generate a token outside of the node client
 
             _getOAuthToken("primate", function(err, token){
+                if(err) {
+                    done(err);
+                    return;
+                }
+
                 var personaClient = persona.createClient({
                     persona_host:"persona",
                     persona_port:80,
@@ -794,6 +799,11 @@ describe("Persona Client Test Suite", function(){
             // use _getOAuthToken to generate a token outside of the node client
 
             _getOAuthToken("primate", function(err, token){
+                if(err) {
+                    done(err);
+                    return;
+                }
+
                 var personaClient = persona.createClient({
                     persona_host:"persona",
                     persona_port:80,
@@ -827,6 +837,11 @@ describe("Persona Client Test Suite", function(){
             // use _getOAuthToken to generate a token outside of the node client
 
             _getOAuthToken("primate", function(err, token){
+                if(err) {
+                    done(err);
+                    return;
+                }
+
                 var personaClient = persona.createClient({
                     persona_host:"persona",
                     persona_port:80,
@@ -849,6 +864,11 @@ describe("Persona Client Test Suite", function(){
             // use _getOAuthToken to generate a token outside of the node client
 
             _getOAuthToken("primate", function(err, token){
+                if(err) {
+                    done(err);
+                    return;
+                }
+
                 var personaClient = persona.createClient({
                     persona_host:"persona",
                     persona_port:80,
