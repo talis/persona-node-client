@@ -725,6 +725,192 @@ PersonaClient.prototype._removeTokenFromCache = function (id, secret, callback) 
 };
 
 /**
+ * Get scope information for a user
+ * @param guid
+ * @param token
+ * @param callback
+ */
+PersonaClient.prototype.getScopesForUser = function(guid, token, callback) {
+    try {
+        _.map([guid, token], function (arg) {
+            if (!_.isString(arg)) {
+                throw "guid and token are required strings";
+            }
+        });
+    } catch (e) {
+        callback(e,null);
+        return;
+    }
+
+    var _this = this;
+
+    var options = {
+            hostname: _this.config.persona_host,
+            port: _this.config.persona_port,
+            path: "/1/clients/" + guid,
+            method: 'GET',
+            headers: {
+                Authorization: "Bearer " + token,
+            },
+        },
+        req = _this.http.request(options, function (resp) {
+            if (resp.statusCode === 200) {
+                var str = '';
+
+                resp.on("data", function (chunk) {
+                    str += chunk;
+                });
+
+                resp.on("end", function () {
+                    var data;
+                    try {
+                        data = JSON.parse(str);
+                    } catch (e) {
+                        callback("Error parsing response from persona: " + str, null);
+                        return;
+                    }
+
+                    if (data && data.scope) {
+                        callback(null, data.scope);
+                    } else if (data && data.error) {
+                        callback(data.error, null);
+                    } else {
+                        callback("Could not get Scopes for Guid", null);
+                    }
+                });
+            } else {
+                var err = "getScopesForUser failed with status code " + resp.statusCode;
+                _this.error(err);
+                callback(err, null);
+            }
+        });
+
+    req.on("error", function (e) {
+        var err = "getScopesForUser problem: " + e.message;
+        _this.error(err);
+        callback(err, null);
+    });
+
+    req.end();
+};
+
+/**
+ * Helper method to set the scopes for a user - can add or remove a scope by passing scopeChange appropriately
+ * @param guid
+ * @param token
+ * @param scopeChange
+ * @param callback
+ */
+PersonaClient.prototype._setScopesForUser = function(guid, token, scopeChange, callback) {
+    try {
+        _.map([guid, token], function (arg) {
+            if (!_.isString(arg)) {
+                throw "guid, token are required strings";
+            }
+        });
+
+        if (!scopeChange) {
+            throw "scopeChange is required";
+        }
+    } catch (e) {
+        callback(e, null);
+        return;
+    }
+
+    var _this = this;
+
+    var options = {
+            hostname: _this.config.persona_host,
+            port: _this.config.persona_port,
+            path: "/1/clients/" + guid,
+            method: 'PATCH',
+            json: true,
+            headers: {
+                Authorization: "Bearer " + token,
+                'Content-Type': 'application/json',
+            },
+        },
+        req = _this.http.request(options, function (resp) {
+            var data = "";
+
+            resp.on('data', function (chunk) {
+                data += chunk;
+            });
+
+            resp.on('end', function(){
+                var err = null;
+
+                // call to set scopes returns 204 if successful
+                if (resp.statusCode !== 204) {
+                    err = "setScopesForUser failed with status code " + resp.statusCode;
+                    _this.error(err);
+                }
+
+                callback(err, null);
+            });
+        });
+
+    req.on("error", function (e) {
+        var err = "setScopesForUser problem: " + e.message;
+        _this.error(err);
+        callback(err, null);
+    });
+
+    req.write(JSON.stringify({scope:scopeChange}));
+    req.end();
+};
+
+/**
+ * Add a specific scope to a user
+ * @param guid
+ * @param token
+ * @param scope
+ * @param callback
+ */
+PersonaClient.prototype.addScopeToUser = function(guid, token, scope, callback) {
+    try {
+        _.map([guid, token, scope], function (arg) {
+            if (!_.isString(arg)) {
+                throw "guid, token and scope are required strings";
+            }
+        });
+    } catch (e) {
+        callback(e, null);
+        return;
+    }
+
+    var _this = this;
+    var scopeChange = {$add:scope};
+
+    _this._setScopesForUser(guid, token, scopeChange, callback);
+};
+
+/**
+ * Remove a specific scope from a user
+ * @param guid
+ * @param token
+ * @param scope
+ * @param callback
+ */
+PersonaClient.prototype.removeScopeFromUser = function(guid, token, scope, callback) {
+    try {
+        _.map([guid, token, scope], function (arg) {
+            if (!_.isString(arg)) {
+                throw "guid, token and scope are required strings";
+            }
+        });
+    } catch (e) {
+        callback(e, null);
+        return;
+    }
+
+    var _this = this;
+    var scopeChange = {$remove:scope};
+
+    _this._setScopesForUser(guid, token, scopeChange, callback);
+};
+
+/**
  * Log wrapping functions
  * @param severity ( debug or error )
  * @param message
