@@ -17,7 +17,8 @@ var VALIDATED_TYPES = {
 var ERROR_TYPES = {
     VALIDATION_FAILURE : "validation_failure",
     COMMUNICATION_ISSUE :"communication_issue",
-    INVALID_TOKEN : "invalid_token"
+    INVALID_TOKEN : "invalid_token",
+    INSUFFICIENT_SCOPE : "insufficient_scope"
 };
 
 /**
@@ -128,7 +129,11 @@ PersonaClient.prototype.validateToken = function (token, scope, overridingScope,
                         _this.validateToken (token, "su", overridingScope, next);
                     } else {
                         _this.debug("Verification failed for token " + cacheKey + " with status code " + oauthResp.statusCode);
-                        next(ERROR_TYPES.VALIDATION_FAILURE, null);
+                        if (oauthResp.statusCode === 403) {
+                            next(ERROR_TYPES.INSUFFICIENT_SCOPE, null);
+                        } else {
+                            next(ERROR_TYPES.VALIDATION_FAILURE, null);
+                        }
                     }
                 }
             }).on ("error", function (e) {
@@ -147,7 +152,6 @@ PersonaClient.prototype.validateToken = function (token, scope, overridingScope,
  */
 PersonaClient.prototype.validateHTTPBearerToken = function (req, res, next, scope) {
     var token = this.getToken(req);
-
     this.validateToken(token, req.param("scope"), scope, function (err, validatedBy) {
         if (!err) {
             next(null, validatedBy);
@@ -168,6 +172,14 @@ PersonaClient.prototype.validateHTTPBearerToken = function (req, res, next, scop
             res.json({
                 "error": "invalid_token",
                 "error_description": "The token is invalid or has expired"
+            });
+            break;
+        case ERROR_TYPES.INSUFFICIENT_SCOPE:
+            res.status(403);
+            res.set("Connection", "close");
+            res.json({
+                "error": "insufficient_scope",
+                "error_description": "The supplied token is missing a required scope"
             });
             break;
         default:
@@ -337,7 +349,6 @@ PersonaClient.prototype.obtainToken = function (id, secret, callback) {
                             'Content-Length': post_data.length
                         }
                     };
-
                 var req = _this.http.request(options, function (resp) {
                     if (resp.statusCode === 200) {
                         var str = '';

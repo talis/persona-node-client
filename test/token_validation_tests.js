@@ -245,9 +245,9 @@ describe("Persona Client Test Suite - Token Validation Tests", function(){
                             res._jsonWasCalled.should.equal(true);
                             res._setWasCalled.should.equal(true);
 
-                            res._status.should.equal(401);
-                            res._json.error.should.equal("invalid_token");
-                            res._json.error_description.should.equal("The token is invalid or has expired");
+                            res._status.should.equal(403);
+                            res._json.error.should.equal("insufficient_scope");
+                            res._json.error_description.should.equal("The supplied token is missing a required scope");
 
                             callback(null, "done");
                         },4000);
