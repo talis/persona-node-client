@@ -1,0 +1,51 @@
+[
+    {
+        "scope": "http://persona:80",
+        "method": "POST",
+        "path": "/oauth/tokens",
+        "body": "grant_type=client_credentials",
+        "status": 200,
+        "response": {
+            "access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJqdGkiOiIwMDBlMzlmZWZlNTY2YzE0NmIwNWIxNjdjNTMxOGUxZWFmZTZlMWMyIiwiaWF0IjoxNDU2MzIwMjQ5LCJleHAiOjE0NTYzMjM4NDksImF1ZCI6InByaW1hdGUiLCJzY29wZXMiOlsic3UiLCJwcmltYXRlIl19.bWXQQGz3xtL2crPkeBaNYjxj366sntALV8_CbcYBrUU-TlLKUMMsA7ypJqKFHUN9haSdNyZ2uL5nH6pBfZYhd6dHcUqyLPKO7fhhnXdhnQYmbAPjHLggTQ-5ygrv1l-S7aybzk66r-CI_RttFPrlse2uXTN1vy8kKotFD7pItOdQh7BUTnyOsGPWmhhnNe2kEXFbaxYyRXYGPSJCDfuAW011hPrRQyV37V8Kx4NtlUSbKjJYc2RtAXIlUuTH2aIkqqsrzqNJHmGAhX7WybjWkOGlu-MP-eqRIZQq6V1-LNwHHTIwo1q8k9sibLVSP2mkoYm46tU0ed2PVR43yg-CxQ",
+            "expires_in": 3600,
+            "token_type": "bearer",
+            "scope": "su primate"
+        },
+        "headers": {
+            "date": "Wed, 24 Feb 2016 13:24:09 GMT",
+            "server": "Apache",
+            "set-cookie": [
+                "PHPSESSID=b9pl3dfa9bctk0s08rojh6q9h3; path=/"
+            ],
+            "expires": "Thu, 19 Nov 1981 08:52:00 GMT",
+            "cache-control": "no-store",
+            "pragma": "no-cache",
+            "content-length": "628",
+            "keep-alive": "timeout=5, max=100",
+            "connection": "Keep-Alive",
+            "content-type": "application/json"
+        }
+    },
+    {
+        "scope": "http://persona:80",
+        "method": "DELETE",
+        "path": "/oauth/users/guid/authorizations/authorization_client_id",
+        "body": "",
+        "status": 204,
+        "response": "",
+        "headers": {
+            "date": "Wed, 24 Feb 2016 13:24:09 GMT",
+            "server": "Apache",
+            "set-cookie": [
+                "PHPSESSID=jpaqd268oa9ds2nhhlt5fag2f7; path=/"
+            ],
+            "expires": "Thu, 19 Nov 1981 08:52:00 GMT",
+            "cache-control": "no-cache, must-revalidate",
+            "pragma": "no-cache",
+            "content-length": "0",
+            "keep-alive": "timeout=5, max=100",
+            "connection": "Keep-Alive",
+            "content-type": "text/html; charset=utf-8"
+        }
+    }
+]

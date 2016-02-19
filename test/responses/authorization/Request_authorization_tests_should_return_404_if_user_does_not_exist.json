@@ -1,0 +1,56 @@
+[
+    {
+        "scope": "http://persona:80",
+        "method": "POST",
+        "path": "/oauth/tokens",
+        "body": "grant_type=client_credentials",
+        "status": 200,
+        "response": {
+            "access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJqdGkiOiIxMjNiNmQwNjY2MzMyYzI1YjAxZmE2YjdjNmE2NjUwMzIxMjkzMGExIiwiaWF0IjoxNDU2MzIwMjA0LCJleHAiOjE0NTYzMjM4MDQsImF1ZCI6InByaW1hdGUiLCJzY29wZXMiOlsic3UiLCJwcmltYXRlIl19.jrFSdndOmpjgnp3u7j_FOFSKEHGvIx4O3Q2I2Rl-1BGo3jc4MczQpNMFzRpU60SLDl3ySbDyI615pCxpuX58Q4hT3M9fZThO8l49LA0fZ3LJlEGhFq8Z-M2EoBkCfeMwX32WG82yfMmzNbY6SUy9yZqUQbFxdf6JYUg75VWdci2AaD1Z23Y4PvhnmhW8fIP6fFGBpVxMFewVnVDskPd4FSN7ZxYn5S6fdCWp37bBZ_HraTnv_ZNTznWBKE2t6xDHCh1KcaD5Bgf9hJOXoemVvSwLqhi6Gn6S1pj7yoNVb5lZMEGaJl1vRiN-GeLX-3I0CdQDRkG13d4tyOSoawK9wQ",
+            "expires_in": 3600,
+            "token_type": "bearer",
+            "scope": "su primate"
+        },
+        "headers": {
+            "date": "Wed, 24 Feb 2016 13:23:24 GMT",
+            "server": "Apache",
+            "set-cookie": [
+                "PHPSESSID=oken9ih815o95trnssfe40t3g7; path=/"
+            ],
+            "expires": "Thu, 19 Nov 1981 08:52:00 GMT",
+            "cache-control": "no-store",
+            "pragma": "no-cache",
+            "content-length": "628",
+            "keep-alive": "timeout=5, max=100",
+            "connection": "Keep-Alive",
+            "content-type": "application/json"
+        }
+    },
+    {
+        "scope": "http://persona:80",
+        "method": "POST",
+        "path": "/oauth/users/guid_does_not_exist/authorizations",
+        "body": {
+            "title": "test title"
+        },
+        "status": 404,
+        "response": {
+            "error": "user_not_found",
+            "error_description": "We could not find a user matching this GUID"
+        },
+        "headers": {
+            "date": "Wed, 24 Feb 2016 13:23:24 GMT",
+            "server": "Apache",
+            "set-cookie": [
+                "PHPSESSID=flvv5bihurh5prjabg07vqfkl0; path=/"
+            ],
+            "expires": "Thu, 19 Nov 1981 08:52:00 GMT",
+            "cache-control": "no-cache, must-revalidate",
+            "pragma": "no-cache",
+            "content-length": "92",
+            "keep-alive": "timeout=5, max=100",
+            "connection": "Keep-Alive",
+            "content-type": "application/json"
+        }
+    }
+]

@@ -1,5 +1,7 @@
-var http = require('http'),
-    querystring = require('querystring');
+var http = require("http");
+var querystring = require("querystring");
+var fs = require("fs");
+var nock = require("nock");
 
 var _getOAuthToken = function getOAuthToken(scope, callback) {
 
@@ -95,8 +97,38 @@ var getStubResponse = function() {
     return res;
 };
 
+var guid = function guid() {
+    function s4() {
+        return Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1);
+    }
+    return s4() + s4() + s4() + s4() + s4()+ s4() + s4() + s4();
+};
 
+var beforeEach = function recordOrReplayHttpCalls(testFriendlyName, responsesFolder) {
+    var testName = testFriendlyName.replace(/ /g, "_");
+    if(process.env.RECORD_HTTP_CALLS === "true") {
+        nock.recorder.rec({
+            dont_print: true,
+            output_objects: true
+        });
+    } else {
+        nock.load(__dirname + "/responses/" + responsesFolder + "/" + testName + ".json");
+    }
+};
 
-exports._getOAuthToken   = _getOAuthToken;
-exports._getStubRequest  = getStubRequest;
+var afterEach = function recordAndSaveHttpCallsIfEnabled(testFriendlyName, responsesFolder) {
+    if(process.env.RECORD_HTTP_CALLS === "true") {
+        var testName = testFriendlyName.replace(/ /g, "_");
+        var fileName = __dirname + "/responses/" + responsesFolder + "/" + testName + ".json";
+        var calls = nock.recorder.play();
+        fs.writeFileSync(fileName, JSON.stringify(calls, null, 4));
+        nock.restore();
+    }
+};
+
+exports.guid = guid;
+exports.beforeEach = beforeEach;
+exports.afterEach = afterEach;
+exports._getOAuthToken = _getOAuthToken;
+exports._getStubRequest = getStubRequest;
 exports._getStubResponse = getStubResponse;

@@ -1,0 +1,32 @@
+[
+    {
+        "scope": "http://persona:80",
+        "method": "PATCH",
+        "path": "/1/clients/fdgNy6QWGmIAl7BRjEsFtk",
+        "body": {
+            "scope": {
+                "$remove": "test_scope"
+            }
+        },
+        "status": 401,
+        "response": {
+            "error": "invalid_token",
+            "error_description": "The access token provided is invalid"
+        },
+        "headers": {
+            "date": "Wed, 24 Feb 2016 14:32:09 GMT",
+            "server": "Apache",
+            "set-cookie": [
+                "PHPSESSID=l2p110kbfae44vdv6quk69v717; path=/"
+            ],
+            "expires": "Thu, 19 Nov 1981 08:52:00 GMT",
+            "cache-control": "no-store",
+            "pragma": "no-cache",
+            "www-authenticate": "Bearer realm=\"Service\", error=\"invalid_token\", error_description=\"The access token provided is invalid\"",
+            "content-length": "84",
+            "keep-alive": "timeout=5, max=100",
+            "connection": "Keep-Alive",
+            "content-type": "application/json"
+        }
+    }
+]

@@ -1,0 +1,25 @@
+[
+    {
+        "scope": "http://persona:80",
+        "method": "GET",
+        "path": "/oauth/keys",
+        "body": "",
+        "status": 200,
+        "response": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAreNgSCIbujagRGpKXR9C\nrm/emoClGz5G6pGgP97A1+e9zmEX4f2PRu9dvAT3wa/BmGRmTcxlCFt6j+GXsVbP\n6Gs2W/p+fTI/b1AQQzThcGsbUfd7kjDDp+8t63SHGysoSXRbARevAb2BoUgPPySj\nirFYlZcMRWH8+TTJF4JTiX7EeTpnDzcqVppWB3zD6Qsqd3SxrWP8R1VbN0IaB1qa\nzU9vS63AL31GQI/MrYGcMYOMR935tx3a6MLkLQeKe7mqGSVoZXVNTD5hdr4ZwRHt\nRCJTNdFhIpte1BI4B3P0ggkFRLZwL0zbmpLBqtCp3h9Cdn7cm3Y25Jk0cPz7n8LS\n+QIDAQAB\n-----END PUBLIC KEY-----\n",
+        "headers": {
+            "date": "Mon, 29 Feb 2016 10:51:53 GMT",
+            "server": "Apache",
+            "set-cookie": [
+                "PHPSESSID=rq7oveamjkb9vo1iedl6nes3o2; path=/"
+            ],
+            "expires": "Thu, 19 Nov 1981 08:52:00 GMT",
+            "cache-control": "no-cache, must-revalidate",
+            "pragma": "no-cache",
+            "vary": "Accept-Encoding",
+            "content-length": "451",
+            "keep-alive": "timeout=5, max=100",
+            "connection": "Keep-Alive",
+            "content-type": "text/plain;charset=utf-8"
+        }
+    }
+]

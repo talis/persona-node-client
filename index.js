@@ -1,18 +1,14 @@
 "use strict";
 
-var cryptojs = require('crypto-js'),
-    url = require('url'),
-    querystring = require('querystring'),
-    _ = require('lodash');
+var cryptojs = require("crypto-js");
+var url = require("url");
+var querystring = require("querystring");
+var _ = require("lodash");
+var jwt = require("jsonwebtoken");
 
 // log severities
 var DEBUG = "debug";
 var ERROR = "error";
-
-var VALIDATED_TYPES = {
-    PERSONA: "verified_by_persona",
-    CACHE: "verified_by_cache"
-};
 
 var ERROR_TYPES = {
     VALIDATION_FAILURE : "validation_failure",
@@ -73,121 +69,180 @@ var PersonaClient = function (config) {
 };
 
 /**
- * Validate bearer token against cache or persona
- * @param token: Token to validate
- * @param scope: Requested scope
- * @param overrideScope: Backup scope to use instead of scope
- * @param next: Callback, function(err, validatedBy)
+ * Validate bearer token locally, via JWT verification.
+ * @param {string} token -  Token to validate.
+ * @param {string=} scope - Optional requested scope that if provided, is also used to validate against.
+ * @param {string} overridingScope - Deprecated since version 1.3.0 (su scope will be automatically checked for).
+ * @callback next - Called with either an error as the first param or "ok" as the result in the second param.
  */
 PersonaClient.prototype.validateToken = function (token, scope, overridingScope, next) {
+    var publicKeyCacheName = "public_key";
+
     if (!next) {
         throw "No callback (next attribute) provided";
     }
 
     if (token == null) {
-        next(ERROR_TYPES.INVALID_TOKEN, null);
-        return;
+        return next(ERROR_TYPES.INVALID_TOKEN, null);
     }
 
-    var _this = this,
-        cacheKey = token + ((scope) ? "@" + scope : "");
-    // if we were given a scope then append the scope to the token to create a cachekey
+    var headScopeThenVerify = function headScope(scope, callback) {
+        var log = this.log.bind(this);
+        log("debug", "Verifying token against scope " + scope + " via Persona");
 
-    this.debug("Validating token: " + cacheKey);
-    this.redisClient.get("access_token:" + cacheKey, function (err, reply) {
-        if (reply === "OK") {
-            _this.debug("Token " + cacheKey + " verified by cache");
-            next(null, VALIDATED_TYPES.CACHE);
-        } else {
-            var requestPath = _this.config.persona_oauth_route + token;
-            var usingScope = scope || overridingScope || null;
+        var options = {
+            hostname: this.config.persona_host,
+            port: this.config.persona_port,
+            path: this.config.persona_oauth_route + token + "?scope=" + scope,
+            method: "HEAD",
+        };
 
-            if (usingScope != null) {
-                requestPath += "?scope=" + usingScope;
+        this.http.request(options, function onSuccess(response) {
+            switch(response.statusCode) {
+            case 204:
+                log("debug", "Verification of token via Persona passed");
+                return callback(null, "ok");
+            case 401:
+                log("debug", "Verification of token via Persona failed");
+                return callback(ERROR_TYPES.VALIDATION_FAILURE, null);
+            case 403:
+                if(scope === "su") {
+                    // We tried using su and can go no further
+                    log("debug", "Verification of token via Persona failed with insufficient scope");
+                    return callback(ERROR_TYPES.INSUFFICIENT_SCOPE, null);
+                } else {
+                    // Try again with su
+                    log("debug", "Verification of token via Persona using scope " + scope + " failed, trying su...");
+                    return headScopeThenVerify("su", callback);
+                }
+                break;
+            default:
+                log("error", "Error verifying token via Persona: " + response.statusCode);
+                return callback(ERROR_TYPES.COMMUNICATION_ISSUE, null);
+            }
+        }).on("error", function onError(error) {
+            log("error", "Verification of token via Persona encountered an unknown error");
+            return callback(error, null);
+        }).end();
+    };
+    headScopeThenVerify = headScopeThenVerify.bind(this);
+
+    var verifyToken = function verifyToken(publicKey) {
+        var debug = this.debug.bind(this);
+        var jwtConfig = {
+            algorithms: ["RS256"]
+        };
+
+        jwt.verify(token, publicKey, jwtConfig, function onVerify(error, decodedToken) {
+            if(error) {
+                debug("Verifying token locally failed");
+                return next(ERROR_TYPES.VALIDATION_FAILURE, null);
             }
 
+            if(scope && decodedToken.hasOwnProperty("scopeCount")) {
+                debug("Token has too many scopes (" + decodedToken.scopeCount + ") to put in payload, asking Persona...");
+                return headScopeThenVerify(scope, next);
+            } else if (scope == null || _.includes(decodedToken.scopes, "su") || _.includes(decodedToken.scopes, scope)) {
+                debug("Verifying token locally passed");
+                return next(null, "ok");
+            } else {
+                debug("Verification of token locally failed with insufficient scope (" + scope + ")");
+                return next(ERROR_TYPES.INSUFFICIENT_SCOPE, null);
+            }
+        });
+    };
+    verifyToken = verifyToken.bind(this);
+
+    var cachePublicKey = function cachePublicKey(publicKey) {
+        // cache the public key for 10 minutes
+        var cacheFor = 60 * 10;
+        this.debug("Caching public key for " + cacheFor + "s");
+        this.redisClient.multi().set(publicKeyCacheName, publicKey).expire(publicKeyCacheName, cacheFor).exec();
+    };
+    cachePublicKey = cachePublicKey.bind(this);
+
+    var onCacheQueried = function getPublicKeyIfNotInCacheThenVerify(error, publicKey) {
+        var log = this.log.bind(this);
+        if (publicKey == null) {
+            log("debug", "Fetching public key from Persona");
             var options = {
-                hostname: _this.config.persona_host,
-                port: _this.config.persona_port,
-                path: requestPath,
-                method: 'HEAD'
+                hostname: this.config.persona_host,
+                port: this.config.persona_port,
+                path: "/oauth/keys",
+                method: "GET",
             };
 
-            _this.debug(JSON.stringify(options));
-
-            _this.http.request(options, function (oauthResp) {
-                if (oauthResp.statusCode === 204) {
-                    // put this key in redis with an expire
-                    _this.redisClient.multi().set("access_token:" + cacheKey, 'OK').expire("access_token:" + cacheKey, 60).exec(function (err, results) {
-                        _this.debug("cache: " + JSON.stringify(err) + JSON.stringify(results));
+            this.http.request(options, function onSuccess(response) {
+                if(response.statusCode === 200) {
+                    var publicKey = "";
+                    response.on("data", function onData(chunk) {
+                        publicKey += chunk;
                     });
-                    _this.debug("Verification passed for token " + cacheKey + ", cached for 60s");
-                    next(null, VALIDATED_TYPES.PERSONA);
+                    response.on("end", function onEnd() {
+                        cachePublicKey(publicKey);
+                        return verifyToken(publicKey);
+                    });
                 } else {
-                    if (usingScope && usingScope !== "su") {
-                        // try su, they are allowed to perform any operation
-                        _this.validateToken (token, "su", overridingScope, next);
-                    } else {
-                        _this.debug("Verification failed for token " + cacheKey + " with status code " + oauthResp.statusCode);
-                        if (oauthResp.statusCode === 403) {
-                            next(ERROR_TYPES.INSUFFICIENT_SCOPE, null);
-                        } else {
-                            next(ERROR_TYPES.VALIDATION_FAILURE, null);
-                        }
-                    }
+                    log("error", "Error fetching public key from Persona: " + response.statusCode);
+                    return next(ERROR_TYPES.COMMUNICATION_ISSUE, null);
                 }
-            }).on ("error", function (e) {
-                _this.error("OAuth::validateToken problem: " + e.message);
-                next(e.message, null);
+            }).on("error", function onError(error) {
+                log("error", "Fetching public key from Persona encountered an unknown error");
+                return next(error, null);
             }).end();
+        } else {
+            this.debug("Using public key from cache");
+            return verifyToken(publicKey);
         }
-    });
+    };
+    this.redisClient.get(publicKeyCacheName, onCacheQueried.bind(this));
 };
 
 /**
- * Express middleware that can be used to verify a token
- * @param req
- * @param res
- * @param next
+ * Express middleware that can be used to verify a token.
+ * @param {Object} request - HTTP request object.
+ * @param {Object} response - HTTP response object.
+ * @callback next - Called with either an error as the first param or "ok" as the result in the second param.
+ * @param {string} scope - @Deprecated since version 1.3.0 set the required scope as a request param. (su scope will be automatically checked for).
  */
-PersonaClient.prototype.validateHTTPBearerToken = function (req, res, next, scope) {
-    var token = this.getToken(req);
-    this.validateToken(token, req.param("scope"), scope, function (err, validatedBy) {
-        if (!err) {
-            next(null, validatedBy);
+PersonaClient.prototype.validateHTTPBearerToken = function (request, response, next, scope) {
+    var token = this.getToken(request);
+    this.validateToken(token, request.param("scope"), scope, function (error, validationResult) {
+        if (!error) {
+            next(null, validationResult);
             return;
         }
 
-        switch(err) {
+        switch(error) {
         case ERROR_TYPES.INVALID_TOKEN:
-            res.status(401);
-            res.json({
+            response.status(401);
+            response.json({
                 "error": "no_token",
                 "error_description": "No token supplied"
             });
             break;
         case ERROR_TYPES.VALIDATION_FAILURE:
-            res.status(401);
-            res.set("Connection", "close");
-            res.json({
+            response.status(401);
+            response.set("Connection", "close");
+            response.json({
                 "error": "invalid_token",
                 "error_description": "The token is invalid or has expired"
             });
             break;
         case ERROR_TYPES.INSUFFICIENT_SCOPE:
-            res.status(403);
-            res.set("Connection", "close");
-            res.json({
+            response.status(403);
+            response.set("Connection", "close");
+            response.json({
                 "error": "insufficient_scope",
                 "error_description": "The supplied token is missing a required scope"
             });
             break;
         default:
-            res.status(500);
-            res.set("Connection", "close");
-            res.json({
+            response.status(500);
+            response.set("Connection", "close");
+            response.json({
                 "error": "unexpected_error",
-                "error_description": err
+                "error_description": error
             });
         }
     });
@@ -573,19 +628,17 @@ PersonaClient.prototype.deleteAuthorization = function (guid, authorization_clie
  * @param {string} token
  * @callback callback
  */
-PersonaClient.prototype.updateProfile = function(guid, profile, token, callback){
+PersonaClient.prototype.updateProfile = function(guid, profile, token, callback) {
 
     try {
-        _.map([guid, token], function (arg) {
-            if (!_.isString(arg)) {
-               throw "guid and token are required strings";
+        [guid, token].forEach(function checkParamIsString(param) {
+            if (!_.isString(param)) {
+                throw "guid and token are required strings";
             }
         });
-        _.map([profile], function (arg) {
-            if (!_.isObject(arg)) {
-                throw "profile is a required object";
-            }
-        });
+        if (!_.isObject(profile)) {
+            throw "profile is a required object";
+        }
 
     } catch (e) {
         callback(e,null);
@@ -604,7 +657,7 @@ PersonaClient.prototype.updateProfile = function(guid, profile, token, callback)
                 'Authorization': 'Bearer ' + token
             },
             data:{
-               profile:JSON.stringify(profile)
+                profile: JSON.stringify(profile)
             }
         },
         req = _this.http.request(options, function (resp) {
@@ -638,7 +691,7 @@ PersonaClient.prototype.updateProfile = function(guid, profile, token, callback)
                 _this.error(err);
                 callback(err, null);
             }
-      });
+        });
 
     req.on("error", function (e) {
         var err = "updateProfile problem: " + e.message;
@@ -673,16 +726,16 @@ PersonaClient.prototype.getProfileByGuid = function(guid, token, callback){
     var options = {
         hostname: _this.config.persona_host,
         port: _this.config.persona_port,
-        path: '/users/' + (_.isArray(guid) ? guid.join(',') : guid),
-        method: 'GET',
+        path: "/users/" + (_.isArray(guid) ? guid.join(",") : guid),
+        method: "GET",
         headers: {
-           'Authorization': 'Bearer ' + token
+            "Authorization": "Bearer " + token
         }
     },
     req = _this.http.request(options, function (resp) {
         if (resp.statusCode === 200) {
 
-            var str = '';
+            var str = "";
             resp.on("data", function (chunk) {
                 str += chunk;
             });
@@ -691,24 +744,22 @@ PersonaClient.prototype.getProfileByGuid = function(guid, token, callback){
                 try {
                     data = JSON.parse(str);
                 } catch (e) {
-                    callback("Error parsing response from persona: " + str, null);
-                    return;
+                    return callback("Error parsing response from persona: " + str, null);
                 }
 
-                if(data){
-                  if (data.error) {
-                      callback(data.error, null);
-                  } else {
-                     callback(null, data);
-                  }
-                } else {
-                    callback("Could not get Profile By Guid", null);
+                if(data) {
+                    if (data.error) {
+                        return callback(data.error, null);
+                    } else {
+                        return callback(null, data);
+                    }
                 }
+                return callback("Could not get Profile By Guid", null);
             });
         } else {
-          var err = "getProfileByGuid failed with status code " + resp.statusCode;
-          _this.error(err);
-          callback(err, null);
+            var err = "getProfileByGuid failed with status code " + resp.statusCode;
+            _this.error(err);
+            return callback(err, null);
         }
     });
 

@@ -1,17 +1,22 @@
-'use strict';
+"use strict";
 
-var async = require('async');
-var should = require('should');
-var assert = require('assert');
-var persona = require('../index.js');
-var cryptojs = require('crypto-js');
-var sinon = require('sinon');
-var _ = require("lodash");
-// This is for mocking out some http responses in some tests
-var PassThrough = require('stream').PassThrough;
+var should = require("should");
+var assert = require("assert");
+var persona = require("../index");
+var runBeforeEach = require("./utils").beforeEach;
+var runAfterEach = require("./utils").afterEach;
 
-describe("Persona Client Test Suite - User Profile Tests", function(){
-    describe("- Get user profile by guid tests", function(){
+describe("Persona Client Test Suite - User Profile Tests", function() {
+
+    beforeEach(function() {
+        runBeforeEach(this.currentTest.title, "user_profile");
+    });
+
+    afterEach(function() {
+        runAfterEach(this.currentTest.title, "user_profile");
+    });
+
+    describe("- Get user profile by guid tests", function() {
         it("should throw an error if guid is not present", function(done) {
             var personaClient = persona.createClient({
                 persona_host:"persona",
@@ -113,17 +118,22 @@ describe("Persona Client Test Suite - User Profile Tests", function(){
                 });
             });
         });
-        it("should return a user object if user found", function(done){
-
-            global.http = require('http');
-            var requestStub = sinon.stub(http, 'request');
-
-            var expected = {guid:'123',profile: {first_name:'Max', surname:'Payne'}};
-            var response = new PassThrough();
-            response.statusCode = 200;
-            response.write(JSON.stringify(expected));
-            response.end();
-            var request = new PassThrough();
+        it("should return a user object if user found", function(done) {
+            var expected = {
+                "_id": {
+                    "$id": "56a24521f8203aa459000024"
+                },
+                "guid": "fdgNy6QWGmIAl7BRjEsFtA",
+                "gupids": [
+                    "google:AItOawmPwlmsEaQiLSJCISvHLO3uT7F4tYKwtUE",
+                    "trapdoor:test.tn@talis.com"
+                ],
+                "profile": {
+                    "first_name": "TN",
+                    "surname": "TestAccount",
+                    "email": "test.tn@talis.com"
+                }
+            };
 
             var personaClient = persona.createClient({
                 persona_host:"persona",
@@ -135,25 +145,13 @@ describe("Persona Client Test Suite - User Profile Tests", function(){
                 redis_db:0,
                 enable_debug: false
             });
-            requestStub.callsArgWith(1, response).returns(request);
 
-            // stub out the call to get obtainToken by providing a fake redisClient that returns known data
-            var now = new Date().getTime() / 1000;
-            var reply = {access_token: 'thisisatoken', expires_at: now + 1000};
-
-            sinon.stub(personaClient.redisClient, "get").callsArgWith(1,null,JSON.stringify(reply));
-
-            personaClient.obtainToken("primate","bananas",function(err,data1) {
-                personaClient.getProfileByGuid('guid_does_exist', data1.access_token, function(err, data){
-
-                    assert(err===null);
-                    assert(data!==null);
-
+            personaClient.obtainToken("primate","bananas",function(error, token) {
+                personaClient.getProfileByGuid('fdgNy6QWGmIAl7BRjEsFtA', token.access_token, function(error, data) {
+                    assert(error == null);
+                    assert(data != null);
                     data.should.be.an.Object;
-                    data.should.eql(expected);
-
-                    http.request.restore();
-                    personaClient.redisClient.get.restore();
+                    data.should.containEql(expected);
                     done();
                 });
             });
@@ -282,15 +280,21 @@ describe("Persona Client Test Suite - User Profile Tests", function(){
             });
         });
         it("should return a user if success", function(done){
-            global.http = require('http');
-            var requestStub = sinon.stub(http, 'request');
-
-            var expected = {guid:'123',profile: {first_name:'Max', surname:'Payne'}};
-            var response = new PassThrough();
-            response.statusCode = 200;
-            response.write(JSON.stringify(expected));
-            response.end();
-            var request = new PassThrough();
+            var expected = {
+                "_id": {
+                    "$id": "56a24521f8203aa459000024"
+                },
+                "guid": "fdgNy6QWGmIAl7BRjEsFtA",
+                "gupids": [
+                    "google:AItOawmPwlmsEaQiLSJCISvHLO3uT7F4tYKwtUE",
+                    "trapdoor:test.tn@talis.com"
+                ],
+                "profile": {
+                    "first_name": "TN",
+                    "surname": "TestAccount",
+                    "email": "test.tn@talis.com"
+                }
+            };
 
             var personaClient = persona.createClient({
                 persona_host:"persona",
@@ -302,24 +306,13 @@ describe("Persona Client Test Suite - User Profile Tests", function(){
                 redis_db:0,
                 enable_debug: false
             });
-            requestStub.callsArgWith(1, response).returns(request);
 
-            // stub out the call to get obtainToken by providing a fake redisClient that returns known data
-            var now = new Date().getTime() / 1000;
-            var reply = {access_token: 'thisisatoken', expires_at: now + 1000};
-
-            sinon.stub(personaClient.redisClient, "get").callsArgWith(1,null,JSON.stringify(reply));
-
-            personaClient.obtainToken("primate","bananas",function(err,data1) {
-                personaClient.updateProfile('guid_does_exist', expected.profile, data1.access_token, function(err, data){
-                    assert(err===null);
-                    assert(data!==null);
-
+            personaClient.obtainToken("primate","bananas",function(error, token) {
+                personaClient.updateProfile('fdgNy6QWGmIAl7BRjEsFtA', expected.profile, token.access_token, function(error, data) {
+                    assert(error == null);
+                    assert(data != null);
                     data.should.be.an.Object;
-                    data.should.eql(expected);
-
-                    http.request.restore();
-                    personaClient.redisClient.get.restore();
+                    data.should.containEql(expected);
                     done();
                 });
             });
