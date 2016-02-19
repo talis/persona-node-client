@@ -1,4 +1,4 @@
-[ ![Codeship Status for talis/persona-node-client](https://codeship.com/projects/2e1dc6e0-b950-0133-e3ad-76946c995c7e/status?branch=master)](https://codeship.com/projects/135481)
+[![Build Status](https://travis-ci.org/talis/persona-node-client.svg?branch=master)](https://travis-ci.org/talis/persona-node-client)
 
 Node Client for Persona, responsible for retrieving, generating, caching and validating OAuth Tokens.
 
