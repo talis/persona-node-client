@@ -6,7 +6,7 @@ Node Client for Persona, responsible for retrieving, generating, caching and val
 Install the module by adding the following line to `packages.json`: 
 
 ```
-    "persona_client": "git://github.com/talis/persona-node-client.git#1.1.1"
+    "persona_client": "git://github.com/talis/persona-node-client.git#1.3.0"
 ```
 
 Create a persona client as follows:
