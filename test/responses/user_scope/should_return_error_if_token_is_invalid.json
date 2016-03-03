@@ -1,0 +1,28 @@
+[
+    {
+        "scope": "http://persona:80",
+        "method": "GET",
+        "path": "/1/clients/guid_does_exist",
+        "body": "",
+        "status": 401,
+        "response": {
+            "error": "invalid_token",
+            "error_description": "The access token provided is invalid"
+        },
+        "headers": {
+            "date": "Wed, 24 Feb 2016 14:31:22 GMT",
+            "server": "Apache",
+            "set-cookie": [
+                "PHPSESSID=2qbkh74lnemb815g967b5geds5; path=/"
+            ],
+            "expires": "Thu, 19 Nov 1981 08:52:00 GMT",
+            "cache-control": "no-store",
+            "pragma": "no-cache",
+            "www-authenticate": "Bearer realm=\"Service\", error=\"invalid_token\", error_description=\"The access token provided is invalid\"",
+            "content-length": "84",
+            "keep-alive": "timeout=5, max=100",
+            "connection": "Keep-Alive",
+            "content-type": "application/json"
+        }
+    }
+]

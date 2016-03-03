@@ -114,10 +114,7 @@ In lieu of a formal styleguide, take care to maintain the existing coding style.
 
 ## Release History
 
-* 1.1.1 - Remove exception that was thrown when the oauth token was invalid. The HTTP status and body is now set as expected.
-* 1.1.0 - Added methods for getting and updating a user profile
-* 1.0.0 - Breaking change to existing functionality: The method validateToken is now called validateHTTPBearerToken. The validateToken method validates a token against Persona, while the validateHTTPBearerToken method validates a token that originates from a http call (one of the attributes required is a http request object).
-* 0.3.0 - added the ability to request/delete client authorizations, and fixed scoping issue on validation.
+See the [releases page](https://github.com/talis/persona-node-client/releases).
 
 ## License
-Copyright (c) 2015 Talis Education Limited.
+Copyright (c) 2016 Talis Education Limited.

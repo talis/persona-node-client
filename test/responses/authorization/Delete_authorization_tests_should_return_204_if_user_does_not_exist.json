@@ -1,0 +1,51 @@
+[
+    {
+        "scope": "http://persona:80",
+        "method": "POST",
+        "path": "/oauth/tokens",
+        "body": "grant_type=client_credentials",
+        "status": 200,
+        "response": {
+            "access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJqdGkiOiI2ODgwYjVlM2RkOGE3NWY2YmIxOTljNTA3OGNhNDYwYzg0YmUzMWUxIiwiaWF0IjoxNDU2MzIwMjQ0LCJleHAiOjE0NTYzMjM4NDQsImF1ZCI6InByaW1hdGUiLCJzY29wZXMiOlsic3UiLCJwcmltYXRlIl19.oPy1QbcYquzvYaiyOyyU-gPqETHLm6Zg32zKHr-Gs6fXrQp1znp0QuT31VRKO7zHs6U7da21q1iRsTKpNLTQbOBXOMSkCOAqMOAyLAmAexgrOeD6wASGDpHfW1Yrm50PXMc7hFfnQG3Iwspewwi_yDcVH5hNYFufLHIo6L4TldM3DqlF5HiwlwF5qAVSH2oci1ZeJRqK3T9xh6Hv6BWJggCRhMXrk_YrpdVOjrbj4P9wiMmD4vrzD5VXZk-b2G6wMS6PkN1C53u32IQ-LsQvM8MWNKmBZl1EpUkGv1pGG3PxxyLNXnJpld1c2NvwElrrIDkI9tNKZR8kfw1iMP8n8w",
+            "expires_in": 3600,
+            "token_type": "bearer",
+            "scope": "su primate"
+        },
+        "headers": {
+            "date": "Wed, 24 Feb 2016 13:24:04 GMT",
+            "server": "Apache",
+            "set-cookie": [
+                "PHPSESSID=chprd6udebftgdq9f2pttagg32; path=/"
+            ],
+            "expires": "Thu, 19 Nov 1981 08:52:00 GMT",
+            "cache-control": "no-store",
+            "pragma": "no-cache",
+            "content-length": "628",
+            "keep-alive": "timeout=5, max=100",
+            "connection": "Keep-Alive",
+            "content-type": "application/json"
+        }
+    },
+    {
+        "scope": "http://persona:80",
+        "method": "DELETE",
+        "path": "/oauth/users/guid_does_not_exist/authorizations/authorization_client_id",
+        "body": "",
+        "status": 204,
+        "response": "",
+        "headers": {
+            "date": "Wed, 24 Feb 2016 13:24:05 GMT",
+            "server": "Apache",
+            "set-cookie": [
+                "PHPSESSID=ovvt8r5v6o3ssi8vf5ffrkapm4; path=/"
+            ],
+            "expires": "Thu, 19 Nov 1981 08:52:00 GMT",
+            "cache-control": "no-cache, must-revalidate",
+            "pragma": "no-cache",
+            "content-length": "0",
+            "keep-alive": "timeout=5, max=100",
+            "connection": "Keep-Alive",
+            "content-type": "text/html; charset=utf-8"
+        }
+    }
+]

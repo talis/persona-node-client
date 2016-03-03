@@ -1,9 +1,14 @@
 language: node_js
-node_js:
-  - "0.11"
-  - "0.10"
-
-before_install: npm install -g grunt-cli
-
+sudo: false
+before_install:
+- npm install -g grunt-cli
 services:
-  - redis-server
+- redis-server
+notifications:
+  hipchat:
+    on_pull_requests: false
+    rooms:
+      secure: aRjW3IS4R/orAQCZkgemuql6fB8+8xXZuvg128OLykvlu3wIO83xbj6rzfBJgP2NGqHNhv/nyBO8zomL4vDk81ZBjysniJdsKgIuvtmnhW7u19Vo/6Ijg474cAcNa91U2TAIuPCLBYQL8oIBTareLoysAcCICVJQEvphPvwWOls=
+    template:
+          - '%{repository}#%{build_number} (%{branch} - %{commit} : %{author}): %{message}'
+    notify: true

@@ -1,0 +1,39 @@
+[
+    {
+        "scope": "http://persona:80",
+        "method": "GET",
+        "path": "/1/clients/fdgNy6QWGmIAl7BRjEsFtk",
+        "body": "",
+        "status": 200,
+        "response": {
+            "rate_limit": 1000,
+            "rate_duration": 1800,
+            "rate_expires": 1417019096,
+            "call_count": 0,
+            "scope": [
+                "fdgNy6QWGmIAl7BRjEsFtk",
+                "tdc:app:access",
+                "tdc:player:access"
+            ]
+        },
+        "headers": {
+            "date": "Wed, 24 Feb 2016 14:31:19 GMT",
+            "server": "Apache",
+            "set-cookie": [
+                "PHPSESSID=lmsv10b24d00251l9u7gerq1q3; path=/"
+            ],
+            "expires": "Thu, 19 Nov 1981 08:52:00 GMT",
+            "cache-control": "no-cache, must-revalidate",
+            "pragma": "no-cache",
+            "p3p": "policyref=\"http://persona/w3c/p3p.xml\", CP=\"CURa ADMa DEVa TAIa PSAa PSDa IVAa IVDa HISa OUR IND DSP ALL COR\"",
+            "access-control-allow-origin": "*",
+            "access-control-allow-credentials": "true",
+            "access-control-allow-methods": "OPTIONS, GET, POST, HEAD, PATCH, PUT",
+            "access-control-allow-headers": "Accept, Authorization, Origin, Referer, X-Requested-With, Content-Type, User-Agent",
+            "content-length": "153",
+            "keep-alive": "timeout=5, max=100",
+            "connection": "Keep-Alive",
+            "content-type": "application/json"
+        }
+    }
+]

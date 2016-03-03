@@ -1,0 +1,53 @@
+[
+    {
+        "scope": "http://persona:80",
+        "method": "POST",
+        "path": "/oauth/tokens",
+        "body": "grant_type=client_credentials",
+        "status": 200,
+        "response": {
+            "access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJqdGkiOiJmMTNlM2VhYWQzZWUzZjkxNzhhMjAxNzE0Nzg5MDNjNjk1ZjQ1MGVjIiwiaWF0IjoxNDU2MzEzMzk1LCJleHAiOjE0NTYzMTY5OTUsImF1ZCI6InByaW1hdGUiLCJzY29wZXMiOlsic3UiLCJwcmltYXRlIl19.RBwpCgJF0_j90dvPS7LEx_8lxds-sYfSObj_PsBn7dYMRKzaicRtgJFUCsvQQBMfXCS95fv9_LCfg5HMdZAQQLtXL4TI7eXQV9c7KW0tx-qUb1h9OeRcLdnh3xbZBLrhvcrn802gDz5E9__v4OSMqI_FASDvC-fAd2JQRcDA7HLsCrER2zGFot3tmG1NjcnjISsDkShCFg4t1VxpDMPABpn6C-OT5tMyWI-0rAPJ8mYSZPGKxxRU8yVVnc_dOCYnvzQXxEoLokSILzYaWdUAz1XVdu_jr4_YTdKtjLaefG-4KWFCLIsVvbEjGlnwTQKwd5RtHw7jnuuBdK-IcS1iMA",
+            "expires_in": 3600,
+            "token_type": "bearer",
+            "scope": "su primate"
+        },
+        "headers": {
+            "date": "Wed, 24 Feb 2016 11:29:55 GMT",
+            "server": "Apache",
+            "set-cookie": [
+                "PHPSESSID=g5peo0c2rp0g5jcioo9j1efpk2; path=/"
+            ],
+            "expires": "Thu, 19 Nov 1981 08:52:00 GMT",
+            "cache-control": "no-store",
+            "pragma": "no-cache",
+            "content-length": "628",
+            "keep-alive": "timeout=5, max=100",
+            "connection": "Keep-Alive",
+            "content-type": "application/json"
+        }
+    },
+    {
+        "scope": "http://persona:80",
+        "method": "POST",
+        "path": "/oauth/tokens",
+        "body": "grant_type=client_credentials",
+        "status": 400,
+        "response": {
+            "error": "invalid_client",
+            "error_description": "The client credentials are invalid"
+        },
+        "headers": {
+            "date": "Wed, 24 Feb 2016 11:29:55 GMT",
+            "server": "Apache",
+            "set-cookie": [
+                "PHPSESSID=4v402l2oh0jvvbl9ig7jmla2m0; path=/"
+            ],
+            "expires": "Thu, 19 Nov 1981 08:52:00 GMT",
+            "cache-control": "no-store",
+            "pragma": "no-cache",
+            "content-length": "83",
+            "connection": "close",
+            "content-type": "application/json"
+        }
+    }
+]

@@ -1,0 +1,6 @@
+.idea/
+test/
+.gitignore
+.*rc
+.travis.yml
+Gruntfile.js

@@ -1,0 +1,108 @@
+[
+    {
+        "scope": "http://persona:80",
+        "method": "POST",
+        "path": "/oauth/tokens",
+        "body": "grant_type=client_credentials",
+        "status": 200,
+        "response": {
+            "access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJqdGkiOiIyNTIzNDEwODFlOTRmZGNiMWY0MjcyNmFjMGZjOWI3NDk5YTMwZGE1IiwiaWF0IjoxNDU2MzIyMDExLCJleHAiOjE0NTYzMjU2MTEsImF1ZCI6InByaW1hdGUiLCJzY29wZXMiOlsic3UiLCJwcmltYXRlIl19.gkQ0tqA2ClncMxRYubpVVkil28EywP21QIdYdI1eRxQFc0emDU65oKji1Hp9Fm51lWHWxjF8pP5t6qPW9-gtv-Hr6D8QuayiwJKVxCcI_PZyR3MK3u4-sC2B23n3SFpi45YeyL7ivKMNooBosztkIJk7eIO460q29VKtAGBY_oN2fgTaT2A2dreCe4_KNPo5m5Myk4zopCs5p6aKdCdaMtaDfPWLjr5w1AIa_dMQOlNPV_LJ0zJ0tcDRObTV6g4gBlySdxpovu8dWkMXYbysm6nGy_koNHYK-dgglCr1SWUjIxDxeOJU_b8NmiaaWZwoLh-XAQ9tsJ88DZaHMuiRpQ",
+            "expires_in": 3600,
+            "token_type": "bearer",
+            "scope": "su primate"
+        },
+        "headers": {
+            "date": "Wed, 24 Feb 2016 13:53:31 GMT",
+            "server": "Apache",
+            "set-cookie": [
+                "PHPSESSID=t5ncup6piugmgtbvmu5qpi04m0; path=/"
+            ],
+            "expires": "Thu, 19 Nov 1981 08:52:00 GMT",
+            "cache-control": "no-store",
+            "pragma": "no-cache",
+            "content-length": "628",
+            "keep-alive": "timeout=5, max=100",
+            "connection": "Keep-Alive",
+            "content-type": "application/json"
+        }
+    },
+    {
+        "scope": "http://persona:80",
+        "method": "GET",
+        "path": "/users/GUID",
+        "body": "",
+        "status": 404,
+        "response": {
+            "error": "user_not_found",
+            "error_description": "We could not find a user matching this GUID"
+        },
+        "headers": {
+            "date": "Wed, 24 Feb 2016 13:53:31 GMT",
+            "server": "Apache",
+            "set-cookie": [
+                "PHPSESSID=jo844te6h8av7hj6fu8mg0st25; path=/"
+            ],
+            "expires": "Thu, 19 Nov 1981 08:52:00 GMT",
+            "cache-control": "no-cache, must-revalidate",
+            "pragma": "no-cache",
+            "p3p": "policyref=\"http://persona/w3c/p3p.xml\", CP=\"CURa ADMa DEVa TAIa PSAa PSDa IVAa IVDa HISa OUR IND DSP ALL COR\"",
+            "access-control-allow-origin": "*",
+            "access-control-allow-credentials": "true",
+            "access-control-allow-methods": "OPTIONS, GET, POST, HEAD, PATCH, PUT",
+            "access-control-allow-headers": "Accept, Authorization, Origin, Referer, X-Requested-With, Content-Type, User-Agent",
+            "content-length": "92",
+            "keep-alive": "timeout=5, max=100",
+            "connection": "Keep-Alive",
+            "content-type": "application/json"
+        }
+    },
+    {
+        "scope": "http://persona:80",
+        "method": "GET",
+        "path": "/users/fdgNy6QWGmIAl7BRjEsFtA",
+        "body": "",
+        "status": 200,
+        "response": {
+            "_id": {
+                "$id": "56a24521f8203aa459000024"
+            },
+            "guid": "fdgNy6QWGmIAl7BRjEsFtA",
+            "gupids": [
+                "google:AItOawmPwlmsEaQiLSJCISvHLO3uT7F4tYKwtUE",
+                "trapdoor:test.tn@talis.com"
+            ],
+            "profile": {
+                "first_name": "TN",
+                "surname": "TestAccount",
+                "email": "test.tn@talis.com"
+            },
+            "created": {
+                "sec": 1453475105,
+                "usec": 923000
+            },
+            "last_updated": {
+                "sec": 1456316195,
+                "usec": 972000
+            }
+        },
+        "headers": {
+            "date": "Wed, 24 Feb 2016 13:53:31 GMT",
+            "server": "Apache",
+            "set-cookie": [
+                "PHPSESSID=enjnucqf9tef7f2k5s6jpdnbm2; path=/"
+            ],
+            "expires": "Thu, 19 Nov 1981 08:52:00 GMT",
+            "cache-control": "no-cache, must-revalidate",
+            "pragma": "no-cache",
+            "p3p": "policyref=\"http://persona/w3c/p3p.xml\", CP=\"CURa ADMa DEVa TAIa PSAa PSDa IVAa IVDa HISa OUR IND DSP ALL COR\"",
+            "access-control-allow-origin": "*",
+            "access-control-allow-credentials": "true",
+            "access-control-allow-methods": "OPTIONS, GET, POST, HEAD, PATCH, PUT",
+            "access-control-allow-headers": "Accept, Authorization, Origin, Referer, X-Requested-With, Content-Type, User-Agent",
+            "content-length": "336",
+            "keep-alive": "timeout=5, max=100",
+            "connection": "Keep-Alive",
+            "content-type": "application/json"
+        }
+    }
+]

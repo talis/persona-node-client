@@ -1,15 +1,23 @@
-'use strict';
+"use strict";
 
-var async = require('async');
-var should = require('should');
-var assert = require('assert');
-var persona = require('../index.js');
-var cryptojs = require('crypto-js');
-var sinon = require('sinon');
-var _ = require("lodash");
+var should = require("should");
+var assert = require("assert");
+var persona = require("../index");
+var cryptojs = require("crypto-js");
+var runBeforeEach = require("./utils").beforeEach;
+var runAfterEach = require("./utils").afterEach;
 
-describe("Persona Client Test Suite - Presigned URL Tests", function(){
-    describe("- Generate and Validate Presigned Url Tests", function(){
+describe("Persona Client Test Suite - Presigned URL Tests", function() {
+
+    beforeEach(function() {
+        runBeforeEach(this.currentTest.title, "presigned_url");
+    });
+
+    afterEach(function() {
+        runAfterEach(this.currentTest.title, "presigned_url");
+    });
+
+    describe("- Generate and Validate Presigned Url Tests", function() {
 
         var secret = "canyoukeepasecret";
 
@@ -98,7 +106,7 @@ describe("Persona Client Test Suite - Presigned URL Tests", function(){
             personaClient.presignUrl(urlToSign, secret, null, function(err, result){
                 if(err) return done(err);
 
-                result.should.contain('&expires=');
+                result.should.containEql('&expires=');
                 done();
             });
 
@@ -180,8 +188,8 @@ describe("Persona Client Test Suite - Presigned URL Tests", function(){
             personaClient.presignUrl(urlToSign, secret, null, function(err, result){
                 if(err) return done(err);
 
-                result.should.contain('&expires=');
-                result.should.contain(urlHash);
+                result.should.containEql('&expires=');
+                result.should.containEql(urlHash);
 
                 done();
             });

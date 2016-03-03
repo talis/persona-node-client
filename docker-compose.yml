@@ -1,0 +1,7 @@
+travis_build_server:
+  image: quay.io/travisci/travis-node-js
+  links: 
+    - redis
+redis:
+  image: quay.io/quay/redis
+  restart: always

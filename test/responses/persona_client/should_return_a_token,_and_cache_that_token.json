@@ -1,0 +1,29 @@
+[
+    {
+        "scope": "http://persona:80",
+        "method": "POST",
+        "path": "/oauth/tokens",
+        "body": "grant_type=client_credentials",
+        "status": 200,
+        "response": {
+            "access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJqdGkiOiI2NWFiNjgwZTRhNzlkZTBjMDk0YThmOTU3YWM0NWUzYTBkYTZjYTIyIiwiaWF0IjoxNDU2MzIxMDEzLCJleHAiOjE0NTYzMjQ2MTMsImF1ZCI6InByaW1hdGUiLCJzY29wZXMiOlsic3UiLCJwcmltYXRlIl19.nacD65q4KCAAbY_LGgxXDjZNkzX90WJFdRJJL3eECIqXOLj59CAPTjFVlP0_qW53mYJPQB4KdvBdb9S11K-EWzupFrpXG5s3NdYwtyjJuuDROipDj_YvF7g1ySmM11eWCHK6FInc6z0NRu-azpYRcZj9kK7ix_UoOpDyFdYZCmDjfwKybEcpR79QQOAY9T4f7ck4vzukues3UtxUtvGPfOE4FOFz8IBEiTMUewXeicM_G9mmIPt9ICDFHD0MDImTyE4cNRISWZVlYz0kPgSx2t4L59D0WJJf30VD66ZyuQWTAt-l_S-9SKod8FPaqe-QYbX9pg9SZl-FJ_ZPW0MlQQ",
+            "expires_in": 3600,
+            "token_type": "bearer",
+            "scope": "su primate"
+        },
+        "headers": {
+            "date": "Wed, 24 Feb 2016 13:36:53 GMT",
+            "server": "Apache",
+            "set-cookie": [
+                "PHPSESSID=tecvjlk5o72apdpsbp9lq355e6; path=/"
+            ],
+            "expires": "Thu, 19 Nov 1981 08:52:00 GMT",
+            "cache-control": "no-store",
+            "pragma": "no-cache",
+            "content-length": "628",
+            "keep-alive": "timeout=5, max=100",
+            "connection": "Keep-Alive",
+            "content-type": "application/json"
+        }
+    }
+]
