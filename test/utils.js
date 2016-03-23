@@ -117,6 +117,8 @@ var beforeEach = function recordOrReplayHttpCalls(testFriendlyName, responsesFol
 };
 
 var afterEach = function recordAndSaveHttpCallsIfEnabled(testFriendlyName, responsesFolder) {
+    // Removes any unused requests so that they don't leak into other tests.
+    nock.cleanAll();
     if(process.env.RECORD_HTTP_CALLS === "true") {
         var testName = testFriendlyName.replace(/ /g, "_");
         var fileName = __dirname + "/responses/" + responsesFolder + "/" + testName + ".json";

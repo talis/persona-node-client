@@ -5,6 +5,7 @@ var url = require("url");
 var querystring = require("querystring");
 var _ = require("lodash");
 var jwt = require("jsonwebtoken");
+var CacheService = require("cache-service");
 
 // log severities
 var DEBUG = "debug";
@@ -25,13 +26,16 @@ var ERROR_TYPES = {
  * config.persona_port = 443;
  * config.persona_scheme = "https";
  * config.persona_oauth_route = "/oauth/tokens/";
- * config.redis_host
- * config.redis_port
- * config.redis_db
  *
  * optional params:
  * config.enable_debug : true|false
  * config.logger: <pass in a logger that has debug() and error() functions>
+ * config.cache: { module: <redis|node-cache>, options: <cache-service-options> }
+ *
+ * deprecated params:
+ * config.redis_host
+ * config.redis_port
+ * config.redis_db
  *
  * This library stores no default configuration of its own. It relies on the application/service
  * it is embedded in to supply this information.
@@ -44,8 +48,7 @@ var PersonaClient = function (config) {
 
     var requiredAttributes = [
         'persona_host', 'persona_port', 'persona_scheme',
-        'persona_oauth_route', 'redis_host', 'redis_port',
-        'redis_db'
+        'persona_oauth_route'
     ];
 
     for (var i = 0; i < requiredAttributes.length; i++) {
@@ -57,10 +60,31 @@ var PersonaClient = function (config) {
         }
     }
 
-    // connect to redis and switch to the configured db
-    var redis = require('redis');
-    this.redisClient = redis.createClient(this.config.redis_port, this.config.redis_host);
-    this.redisClient.select(this.config.redis_db);
+    var CacheServiceModule;
+    var cacheOptions = {};
+    var log = this.log.bind(this);
+
+    if(this.config.cache) {
+        log("debug", "Using cache module " + this.config.cache.module + " with: " + JSON.stringify(this.config.cache));
+        CacheServiceModule = require( "cache-service-" + this.config.cache.module || "node-cache" );
+        if (this.config.cache.options) {
+            cacheOptions = this.config.cache.options;
+        }
+    } else if (this.config.redis_host && this.config.redis_port) {
+        // Legacy config, set up as redis cache
+        log("warn", "Setting cache options via config.redis is deprecated");
+        // connect to redis and switch to the configured db
+        CacheServiceModule = require("cache-service-redis");
+        cacheOptions.redisData = {
+            hostname: this.config.redis_host,
+            port: this.config.redis_port
+        };
+    } else  {
+        log("warn", "No cache settings defined, using default in-memory cache");
+        CacheServiceModule = require("cache-service-node-cache");
+    }
+    var cacheModule = new CacheServiceModule(cacheOptions);
+    this.tokenCache = new CacheService({verbose: this.config.debug}, [cacheModule]);
 
     // need to instantiate this based on the configured scheme
     this.http = require(this.config.persona_scheme);
@@ -94,7 +118,7 @@ PersonaClient.prototype.validateToken = function (token, scope, overridingScope,
             hostname: this.config.persona_host,
             port: this.config.persona_port,
             path: this.config.persona_oauth_route + token + "?scope=" + scope,
-            method: "HEAD",
+            method: "HEAD"
         };
 
         this.http.request(options, function onSuccess(response) {
@@ -157,7 +181,7 @@ PersonaClient.prototype.validateToken = function (token, scope, overridingScope,
         // cache the public key for 10 minutes
         var cacheFor = 60 * 10;
         this.debug("Caching public key for " + cacheFor + "s");
-        this.redisClient.multi().set(publicKeyCacheName, publicKey).expire(publicKeyCacheName, cacheFor).exec();
+        this.tokenCache.set(publicKeyCacheName, publicKey, cacheFor);
     };
     cachePublicKey = cachePublicKey.bind(this);
 
@@ -169,7 +193,7 @@ PersonaClient.prototype.validateToken = function (token, scope, overridingScope,
                 hostname: this.config.persona_host,
                 port: this.config.persona_port,
                 path: "/oauth/keys",
-                method: "GET",
+                method: "GET"
             };
 
             this.http.request(options, function onSuccess(response) {
@@ -195,7 +219,7 @@ PersonaClient.prototype.validateToken = function (token, scope, overridingScope,
             return verifyToken(publicKey);
         }
     };
-    this.redisClient.get(publicKeyCacheName, onCacheQueried.bind(this));
+    this.tokenCache.get(publicKeyCacheName, onCacheQueried.bind(this));
 };
 
 /**
@@ -382,7 +406,7 @@ PersonaClient.prototype.obtainToken = function (id, secret, callback) {
         cacheKey = "obtain_token:" + cryptojs.HmacSHA256(id, secret);
 
     // try cache first
-    this.redisClient.get(cacheKey, function (err, reply) {
+    this.tokenCache.get(cacheKey, function (err, reply) {
         if (err) {
             callback(err, null);
         } else {
@@ -405,8 +429,10 @@ PersonaClient.prototype.obtainToken = function (id, secret, callback) {
                         }
                     };
                 var req = _this.http.request(options, function (resp) {
+                    _this.debug(JSON.stringify(resp));
+                    var str = "";
                     if (resp.statusCode === 200) {
-                        var str = '';
+
                         resp.on("data", function (chunk) {
                             str += chunk;
                         });
@@ -426,13 +452,8 @@ PersonaClient.prototype.obtainToken = function (id, secret, callback) {
                                     now = (new Date().getTime() / 1000);
                                 data.expires_at = now + data.expires_in;
                                 if (cacheFor > 0) {
-                                    _this.redisClient.multi().set(cacheKey, JSON.stringify(data)).expire(cacheKey, cacheFor).exec(function (err) {
-                                        if (err) {
-                                            callback(err, null);
-                                        } else {
-                                            callback(null, data);
-                                        }
-                                    });
+                                    _this.tokenCache.set(cacheKey, JSON.stringify(data), cacheFor);
+                                    callback(null, data);
                                 } else {
                                     callback(null, data);
                                 }
@@ -454,14 +475,15 @@ PersonaClient.prototype.obtainToken = function (id, secret, callback) {
                 req.write(post_data);
                 req.end();
             } else {
-                _this.debug("Found cached token for key " + cacheKey + ": " + reply);
                 var data;
-                try {
+                if (_.isObject(reply)) {
+                    data = reply;
+                    reply = JSON.stringify(data);
+                } else {
                     data = JSON.parse(reply);
-                } catch (e) {
-                    callback("Error parsing cached token: " + reply, null);
-                    return;
                 }
+                _this.debug("Found cached token for key " + cacheKey + ": " + reply);
+
                 if (data.access_token) {
                     // recalc expires_in
                     var now = new Date().getTime() / 1000;
@@ -780,7 +802,7 @@ PersonaClient.prototype.getProfileByGuid = function(guid, token, callback){
 PersonaClient.prototype._removeTokenFromCache = function (id, secret, callback) {
     var cacheKey = "obtain_token:" + cryptojs.HmacSHA256(id, secret),
         _this = this;
-    _this.redisClient.del(cacheKey, function (err) {
+    _this.tokenCache.del(cacheKey, function (err) {
         _this.debug("Deleting " + cacheKey + " and retrying obtainToken..");
         callback(err);
     });
@@ -812,8 +834,8 @@ PersonaClient.prototype.getScopesForUser = function(guid, token, callback) {
             path: "/1/clients/" + guid,
             method: 'GET',
             headers: {
-                Authorization: "Bearer " + token,
-            },
+                Authorization: "Bearer " + token
+            }
         },
         req = _this.http.request(options, function (resp) {
             if (resp.statusCode === 200) {
@@ -889,8 +911,8 @@ PersonaClient.prototype._setScopesForUser = function(guid, token, scopeChange, c
             json: true,
             headers: {
                 Authorization: "Bearer " + token,
-                'Content-Type': 'application/json',
-            },
+                'Content-Type': 'application/json'
+            }
         },
         req = _this.http.request(options, function (resp) {
             var data = "";

@@ -3,7 +3,7 @@
 Node Client for Persona, responsible for retrieving, generating, caching and validating OAuth Tokens.
 
 ## Getting Started
-Install the module by adding the following line to `packages.json`: 
+Install the module by adding the following line to `packages.json`:
 
 ```
     "persona_client": "git://github.com/talis/persona-node-client.git#1.3.0"
@@ -18,9 +18,6 @@ var personaClient = persona.createClient({
     persona_port:443,
     persona_scheme:"https",
     persona_oauth_route:"/oauth/tokens",
-    redis_host:"localhost",
-    redis_port:6379,
-    redis_db:0,
     enable_debug: true,
     logger: AppLogger
 });
@@ -57,7 +54,7 @@ If the validation fails, `401` will be returned to the client automatically.
 
 ### Pre-signing signing urls
 
-Signing: 
+Signing:
 
 ```javascript
   personaClient.presignUrl('http://url.to.sign/','mySecret',secsSinceEpocToExpiry,function(err,signedUrl) {
@@ -73,7 +70,7 @@ Checking:
 
 ### Client authorizations
 
-Requesting: 
+Requesting:
 
 ```javascript
   personaClient.requestAuthorization('user_guid', 'Required for access to admin', 'client_id', 'client_secret', function(err,authorization) {
@@ -108,6 +105,35 @@ Via guid:
     var profile = user.profile;
   });
 ```
+
+### Caching OAuth tokens
+
+Persona client allows multiple strategies to cache tokens (to avoid repeated
+ requests to Persona) via [cache-service](https://npmjs.org/package/cache-service)
+
+ This is configured through the persona client config, e.g.:
+
+ ```javascript
+ {
+     persona_host:"localhost",
+     persona_port:443,
+     persona_scheme:"https",
+     persona_oauth_route:"/oauth/tokens",
+     cache: {
+       module: "redis",
+       options: {
+         redisData: {
+           hostname: "localhost",
+           port: 6379
+         }
+       }
+     },
+     enable_debug: true,
+     logger: AppLogger
+ ```
+
+ `module` corresponds to any cache-service module: e.g. "redis" would require
+ `cache-service-redis`.  By default, it will use an in-memory cache (`node-cache`).
 
 ## Contributing
 In lieu of a formal styleguide, take care to maintain the existing coding style. Add unit tests for any new or changed functionality. Lint and test your code using [Grunt](http://gruntjs.com/).
