@@ -96,14 +96,15 @@ var PersonaClient = function (config) {
  * Validate bearer token locally, via JWT verification.
  * @param {string} token -  Token to validate.
  * @param {string=} scope - Optional requested scope that if provided, is also used to validate against.
- * @param {string} overridingScope - Deprecated since version 1.3.0 (su scope will be automatically checked for).
  * @callback next - Called with either an error as the first param or "ok" as the result in the second param.
  */
-PersonaClient.prototype.validateToken = function (token, scope, overridingScope, next) {
+PersonaClient.prototype.validateToken = function (token, scope, next) {
     var publicKeyCacheName = "public_key";
 
     if (!next) {
         throw "No callback (next attribute) provided";
+    } else if (typeof next !== "function") {
+        throw "Parameter 'next' is not a function";
     }
 
     if (token == null) {
@@ -225,13 +226,15 @@ PersonaClient.prototype.validateToken = function (token, scope, overridingScope,
 /**
  * Express middleware that can be used to verify a token.
  * @param {Object} request - HTTP request object.
- * @param {Object} response - HTTP response object.
+ * @param {Object} response - HTTP response object. If you want to validate against a scope (pre-2.0 behavior), provide it as req.params.scope
  * @callback next - Called with either an error as the first param or "ok" as the result in the second param.
- * @param {string} scope - @Deprecated since version 1.3.0 set the required scope as a request param. (su scope will be automatically checked for).
  */
-PersonaClient.prototype.validateHTTPBearerToken = function (request, response, next, scope) {
+PersonaClient.prototype.validateHTTPBearerToken = function (request, response, next) {
+    if (arguments.length > 3) {
+        throw "Usage: validateHTTPBearerToken(request, response, next)";
+    }
     var token = this.getToken(request);
-    this.validateToken(token, request.param("scope"), scope, function (error, validationResult) {
+    this.validateToken(token, request.param("scope"), function (error, validationResult) {
         if (!error) {
             next(null, validationResult);
             return;
