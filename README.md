@@ -132,8 +132,11 @@ Persona client allows multiple strategies to cache tokens (to avoid repeated
      logger: AppLogger
  ```
 
- `module` corresponds to any cache-service module: e.g. "redis" would require
- `cache-service-redis`.  By default, it will use an in-memory cache (`node-cache`).
+`module` corresponds to any cache-service module: e.g. "redis" would require
+`cache-service-redis`.  By default, it will use an in-memory cache (`node-cache`).
+ 
+`options` are passed directly to the `cache-service-{module}` constructor, so can be whatever is valid for a given
+cache-service module.
 
 ## Contributing
 In lieu of a formal styleguide, take care to maintain the existing coding style. Add unit tests for any new or changed functionality. Lint and test your code using [Grunt](http://gruntjs.com/).
