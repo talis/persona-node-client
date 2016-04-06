@@ -432,7 +432,6 @@ PersonaClient.prototype.obtainToken = function (id, secret, callback) {
                         }
                     };
                 var req = _this.http.request(options, function (resp) {
-                    _this.debug(JSON.stringify(resp));
                     var str = "";
                     if (resp.statusCode === 200) {
 
