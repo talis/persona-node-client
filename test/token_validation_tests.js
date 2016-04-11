@@ -355,6 +355,7 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
         });
 
         it("should not validate a token when the server-side check returns 401", function(done) {
+
             var payload = {
                 scopeCount: 26
             };
@@ -368,6 +369,7 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
 
             jwt.sign(payload, privateKey, jwtSigningOptions, function(token) {
                 // We can't replay the recorded response as the token in that request will expire
+                nock('http://persona').get(/\/oauth\/keys/).reply(200, publicKey);
                 nock("http://persona").head(/\/oauth\/tokens\/.*\?scope=fatuser/).reply(401);
 
                 var req = _getStubRequest(token, "fatuser");
@@ -473,6 +475,7 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
             };
 
             jwt.sign(payload, privateKey, jwtSigningOptions, function(token) {
+                nock('http://persona').get(/\/oauth\/keys/).reply(504);
                 var req = _getStubRequest(token, "standard_user");
                 var res = _getStubResponse();
 
