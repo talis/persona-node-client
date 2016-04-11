@@ -94,14 +94,14 @@ var PersonaClient = function (config) {
     // need to instantiate this based on the configured scheme
     this.http = require(this.config.persona_scheme);
 
-    if (this.config.cert_background_refresh !== true) {
+    if (this.config.cert_background_refresh !== false) {
         this.getPublicKey(function retrievedCert() {
             setInterval(function refreshCert() {
                 this.getPublicKey(function retrievedPublicKey() {
                     log('debug', 'retrieved public key');
                 }, true);
-            }, PUBLIC_KEY_AUTO_REFRESH_TIMEOUT);
-        });
+            }.bind(this), PUBLIC_KEY_AUTO_REFRESH_TIMEOUT);
+        }.bind(this));
     }
 
     this.log('debug', "Persona Client Created");
