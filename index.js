@@ -110,7 +110,7 @@ var PersonaClient = function (config) {
 /**
  * Retrieve Persona's public key that is used to sign the JWTs.
  * @param {callback} cb function(err, publicCert)
- * @param {boolean=} refresh (optional) refresh the token
+ * @param {boolean=} refresh (optional) refresh the certificate
  */
 PersonaClient.prototype.getPublicKey = function getPublicKey(cb, refresh) {
     var log = this.log.bind(this);
