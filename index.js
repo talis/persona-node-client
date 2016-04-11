@@ -9,7 +9,7 @@ var CacheService = require("cache-service");
 
 var PUBLIC_KEY_CACHE_NAME = "public_key";
 var CACHE_TIMEOUT = 60 * 10;
-var PUBLIC_KEY_AUTO_REFRESH_TIMEOUT = 60 * 9;
+//var PUBLIC_KEY_AUTO_REFRESH_TIMEOUT = 60 * 9;
 
 // log severities
 var DEBUG = "debug";
@@ -94,15 +94,15 @@ var PersonaClient = function (config) {
     // need to instantiate this based on the configured scheme
     this.http = require(this.config.persona_scheme);
 
-    if (this.config.cert_background_refresh !== false) {
-        this.getPublicKey(function retrievedCert() {
-            setInterval(function refreshCert() {
-                this.getPublicKey(function retrievedPublicKey() {
-                    log('debug', 'retrieved public key');
-                }, true);
-            }.bind(this), PUBLIC_KEY_AUTO_REFRESH_TIMEOUT);
-        }.bind(this));
-    }
+    //if (this.config.cert_background_refresh !== false) {
+        //this.getPublicKey(function retrievedCert() {
+            //setInterval(function refreshCert() {
+                //this.getPublicKey(function retrievedPublicKey() {
+                    //log('debug', 'retrieved public key');
+                //}, true);
+            //}.bind(this), PUBLIC_KEY_AUTO_REFRESH_TIMEOUT);
+        //}.bind(this));
+    //}
 
     this.log('debug', "Persona Client Created");
 };
