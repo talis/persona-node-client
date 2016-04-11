@@ -35,7 +35,7 @@ var ERROR_TYPES = {
  * config.enable_debug : true|false
  * config.logger: <pass in a logger that has debug() and error() functions>
  * config.cache: { module: <redis|node-cache>, options: <cache-service-options> }
- * config.cert_background_refresh: true|false
+ * config.cert_background_refresh: true|false defaults to true
  *
  * deprecated params:
  * config.redis_host
@@ -94,7 +94,7 @@ var PersonaClient = function (config) {
     // need to instantiate this based on the configured scheme
     this.http = require(this.config.persona_scheme);
 
-    if (this.config.cert_background_refresh === true) {
+    if (this.config.cert_background_refresh !== true) {
         this.getPublicKey(function retrievedCert() {
             setInterval(function refreshCert() {
                 this.getPublicKey(function retrievedPublicKey() {
