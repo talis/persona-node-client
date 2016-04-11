@@ -1082,6 +1082,8 @@ PersonaClient.prototype.error = function (message) {
     this.log(ERROR, message);
 };
 
+exports.errorTypes = ERROR_TYPES;
+
 /**
  * The only way to get an instance of the Persona Client is through
  * this method
@@ -1091,3 +1093,4 @@ PersonaClient.prototype.error = function (message) {
 exports.createClient = function (config) {
     return new PersonaClient(config);
 };
+
