@@ -76,6 +76,15 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
             personaClient.http.request.restore();
         });
 
+        it('should retrieve cert straight away if auto update is on', function(done) {
+            nock('http://persona').get(/\/oauth\/keys/).reply(200, publicKey);
+            personaClientConfig.cert_background_refresh = true;
+            persona.createClient(personaClientConfig);
+            setTimeout(function fin() {
+                return done();
+            }, 1000);
+        });
+
         it("should not validate an invalid token", function(done) {
             nock('http://persona').get(/\/oauth\/keys/).reply(200, publicKey);
             var req = _getStubRequest("skldfjlskj", null);
