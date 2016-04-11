@@ -7,6 +7,10 @@ var _ = require("lodash");
 var jwt = require("jsonwebtoken");
 var CacheService = require("cache-service");
 
+var PUBLIC_KEY_CACHE_NAME = "public_key";
+var CACHE_TIMEOUT = 60 * 10;
+var PUBLIC_KEY_AUTO_REFRESH_TIMEOUT = 60 * 9;
+
 // log severities
 var DEBUG = "debug";
 var ERROR = "error";
@@ -31,6 +35,7 @@ var ERROR_TYPES = {
  * config.enable_debug : true|false
  * config.logger: <pass in a logger that has debug() and error() functions>
  * config.cache: { module: <redis|node-cache>, options: <cache-service-options> }
+ * config.cert_background_refresh: true|false
  *
  * deprecated params:
  * config.redis_host
@@ -89,7 +94,93 @@ var PersonaClient = function (config) {
     // need to instantiate this based on the configured scheme
     this.http = require(this.config.persona_scheme);
 
-    this.debug("Persona Client Created");
+    if (this.config.cert_background_refresh === true) {
+        this.getPublicKey(function retrievedCert() {
+            setInterval(function refreshCert() {
+                this.getPublicKey(function retrievedPublicKey() {
+                    log('debug', 'retrieved public key');
+                }, true);
+            }, PUBLIC_KEY_AUTO_REFRESH_TIMEOUT);
+        });
+    }
+
+    this.log('debug', "Persona Client Created");
+};
+
+/**
+ * Retrieve Persona's public key that is used to sign the JWTs.
+ * @param {callback} cb function(err, publicCert)
+ * @param {boolean=} refresh (optional) refresh the token
+ */
+PersonaClient.prototype.getPublicKey = function getPublicKey(cb, refresh) {
+    var log = this.log.bind(this);
+
+    var cachePublicKey = function cachePublicKey(publicKey) {
+        log('debug', 'Caching public key for ' + CACHE_TIMEOUT + 's');
+        this.tokenCache.set(PUBLIC_KEY_CACHE_NAME, publicKey, CACHE_TIMEOUT);
+    }.bind(this);
+
+    var getCachedPublicKey = function getCachedPublicKey(cb) {
+        this.tokenCache.get(PUBLIC_KEY_CACHE_NAME, function getPublicKeyIfNotInCacheThenVerify(error, publicKey) {
+            if (_.isString(publicKey)) {
+                log('debug', 'Using public key from cache');
+                return cb(publicKey);
+            }
+
+            return cb(null);
+        });
+    }.bind(this);
+
+    var getRemotePublicKey = function getRemotePublicKey(cb) {
+        var options = {
+            hostname: this.config.persona_host,
+            port: this.config.persona_port,
+            path: '/oauth/keys',
+            method: 'GET',
+        };
+
+        log('debug', 'Fetching public key from Persona');
+        this.http.request(options, function onResponse(response) {
+            var publicKey = '';
+
+            if (response.statusCode !== 200) {
+                log('error', 'Error fetching public key from Persona: ' + response.statusCode);
+                return cb(ERROR_TYPES.COMMUNICATION_ISSUE, null);
+            }
+
+            response.on('data', function onData(chunk) {
+                publicKey += chunk;
+            });
+
+            response.on('end', function onEnd() {
+                cachePublicKey(publicKey);
+                return cb(null, publicKey);
+            });
+        }).on('error', function onError(error) {
+            log('error', 'Fetching public key from Persona encountered an unknown error');
+            return cb(error, null);
+        }).end();
+    }.bind(this);
+
+    if (refresh === true) {
+        getRemotePublicKey(function retrievedPublicKey(err, publicKey) {
+            if (err) {
+                return cb(err, null);
+            }
+
+            return cb(null, publicKey);
+        });
+    } else {
+        getCachedPublicKey(function retrieveKey(publicKey) {
+            if (publicKey) {
+                return cb(null, publicKey);
+            }
+
+            getRemotePublicKey(function retrievedPublicKey(err, updatedPublicKey) {
+                return cb(err, updatedPublicKey);
+            });
+        });
+    }
 };
 
 /**
@@ -99,8 +190,6 @@ var PersonaClient = function (config) {
  * @callback next - Called with either an error as the first param or "ok" as the result in the second param.
  */
 PersonaClient.prototype.validateToken = function (token, scope, next) {
-    var publicKeyCacheName = "public_key";
-
     if (!next) {
         throw "No callback (next attribute) provided";
     } else if (typeof next !== "function") {
@@ -175,52 +264,15 @@ PersonaClient.prototype.validateToken = function (token, scope, next) {
                 return next(ERROR_TYPES.INSUFFICIENT_SCOPE, null);
             }
         });
-    };
-    verifyToken = verifyToken.bind(this);
+    }.bind(this);
 
-    var cachePublicKey = function cachePublicKey(publicKey) {
-        // cache the public key for 10 minutes
-        var cacheFor = 60 * 10;
-        this.debug("Caching public key for " + cacheFor + "s");
-        this.tokenCache.set(publicKeyCacheName, publicKey, cacheFor);
-    };
-    cachePublicKey = cachePublicKey.bind(this);
-
-    var onCacheQueried = function getPublicKeyIfNotInCacheThenVerify(error, publicKey) {
-        var log = this.log.bind(this);
-        if (publicKey == null) {
-            log("debug", "Fetching public key from Persona");
-            var options = {
-                hostname: this.config.persona_host,
-                port: this.config.persona_port,
-                path: "/oauth/keys",
-                method: "GET"
-            };
-
-            this.http.request(options, function onSuccess(response) {
-                if(response.statusCode === 200) {
-                    var publicKey = "";
-                    response.on("data", function onData(chunk) {
-                        publicKey += chunk;
-                    });
-                    response.on("end", function onEnd() {
-                        cachePublicKey(publicKey);
-                        return verifyToken(publicKey);
-                    });
-                } else {
-                    log("error", "Error fetching public key from Persona: " + response.statusCode);
-                    return next(ERROR_TYPES.COMMUNICATION_ISSUE, null);
-                }
-            }).on("error", function onError(error) {
-                log("error", "Fetching public key from Persona encountered an unknown error");
-                return next(error, null);
-            }).end();
-        } else {
-            this.debug("Using public key from cache");
-            return verifyToken(publicKey);
+    this.getPublicKey(function retrievedPublicKey(err, publicKey) {
+        if (err) {
+            return next(err, null);
         }
-    };
-    this.tokenCache.get(publicKeyCacheName, onCacheQueried.bind(this));
+
+        return verifyToken(publicKey);
+    });
 };
 
 /**
@@ -272,6 +324,9 @@ PersonaClient.prototype.validateHTTPBearerToken = function (request, response, n
                 "error_description": error
             });
         }
+
+        next(error, null);
+        return;
     });
 };
 
