@@ -93,7 +93,7 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
             setTimeout(function fin() {
                 clearInterval(client.refreshTimerId);
                 return done();
-            }, 1000);
+            }, 3000);
         });
 
         it("should not validate an invalid token", function(done) {
