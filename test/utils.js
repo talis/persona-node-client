@@ -111,9 +111,11 @@ var beforeEach = function recordOrReplayHttpCalls(testFriendlyName, responsesFol
             dont_print: true,
             output_objects: true
         });
-    } else {
-        nock.load(__dirname + "/responses/" + responsesFolder + "/" + testName + ".json");
+
+        return null;
     }
+
+    return nock.load(__dirname + '/responses/' + responsesFolder + '/' + testName + '.json');
 };
 
 var afterEach = function recordAndSaveHttpCallsIfEnabled(testFriendlyName, responsesFolder) {

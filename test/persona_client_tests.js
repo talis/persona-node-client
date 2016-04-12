@@ -64,6 +64,7 @@ describe("Persona Client Test Suite - Constructor & Token Tests", function() {
                     persona_port: 80,
                     persona_scheme: "http",
                     persona_oauth_route: "/oauth/tokens",
+                    cert_background_refresh: false,
                     cache: {
                         module: "redis",
                         options: {
@@ -91,7 +92,8 @@ describe("Persona Client Test Suite - Constructor & Token Tests", function() {
                 persona_port: process.env.PERSONA_TEST_PORT || 80,
                 persona_scheme: process.env.PERSONA_TEST_SCHEME || "http",
                 persona_oauth_route: "/oauth/tokens/",
-                enable_debug: false
+                enable_debug: false,
+                cert_background_refresh: false,
             },
             "redis": {
                 persona_host: process.env.PERSONA_TEST_HOST || "persona",
@@ -107,7 +109,8 @@ describe("Persona Client Test Suite - Constructor & Token Tests", function() {
                         }
                     }
                 },
-                enable_debug: false
+                enable_debug: false,
+                cert_background_refresh: false,
             },
             "legacy-config-options": {
                 persona_host: process.env.PERSONA_TEST_HOST || "persona",
@@ -117,7 +120,8 @@ describe("Persona Client Test Suite - Constructor & Token Tests", function() {
                 redis_host: "localhost",
                 redis_port: 6379,
                 redis_db: 0,
-                enable_debug: false
+                enable_debug: false,
+                cert_background_refresh: false,
             }
         }, function(personaClientConfig) {
             beforeEach(function () {

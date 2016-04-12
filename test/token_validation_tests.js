@@ -14,6 +14,7 @@ var runBeforeEach = require("./utils").beforeEach;
 var runAfterEach = require("./utils").afterEach;
 var leche = require("leche");
 var withData = leche.withData;
+var lodash = require('lodash');
 
 describe("Persona Client Test Suite - Token Validation Tests", function() {
 
@@ -26,7 +27,8 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
             persona_port: process.env.PERSONA_TEST_PORT || 80,
             persona_scheme: process.env.PERSONA_TEST_SCHEME || "http",
             persona_oauth_route: "/oauth/tokens/",
-            enable_debug: false
+            enable_debug: false,
+            cert_background_refresh: false,
         },
         "redis": {
             persona_host: process.env.PERSONA_TEST_HOST || "persona",
@@ -44,7 +46,8 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
                     }
                 }
             },
-            enable_debug: false
+            enable_debug: false,
+            cert_background_refresh: false,
         },
         "legacy-config-options": {
             persona_host: process.env.PERSONA_TEST_HOST || "persona",
@@ -54,11 +57,12 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
             redis_host: "localhost",
             redis_port: 6379,
             redis_db: 0,
-            enable_debug: false
+            enable_debug: false,
+            cert_background_refresh: false,
         }
     }, function(personaClientConfig) {
         beforeEach(function(done) {
-            runBeforeEach(this.currentTest.title, "token_validation");
+            this.nockAssertions = runBeforeEach(this.currentTest.title, "token_validation");
 
             personaClient = persona.createClient(personaClientConfig);
             sinon.spy(personaClient.http, "request");
@@ -68,9 +72,28 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
             });
         });
 
-        afterEach(function() {
+        afterEach(function afterEachTest() {
+            if (this.nockAssertions) {
+                lodash.forEach(this.nockAssertions, function verifyEachNockRequest(nockAssertion) {
+                    nockAssertion.done();
+                });
+            }
+
             runAfterEach(this.currentTest.title, "token_validation");
             personaClient.http.request.restore();
+        });
+
+        it('should retrieve cert straight away if auto update is on', function autoUpdateTest(done) {
+            var config = lodash.clone(personaClientConfig);
+            config.cert_background_refresh = true;
+
+            persona.PUBLIC_KEY_AUTO_REFRESH_TIMEOUT = 1;
+            var client = persona.createClient(config);
+
+            setTimeout(function fin() {
+                clearInterval(client.refreshTimerId);
+                return done();
+            }, 3000);
         });
 
         it("should not validate an invalid token", function(done) {
@@ -80,10 +103,8 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
             // the callback wont be called internally because this is middleware
             // therefore we need to call validate token and wait a couple of seconds for the
             // request to fail and assert the response object
-            personaClient.validateHTTPBearerToken(req, res, function() {
-                done("validation passed when it should not have");
-            });
-            setTimeout(function(){
+            personaClient.validateHTTPBearerToken(req, res, function validatedToken(err) {
+                err.should.be.equal(persona.errorTypes.VALIDATION_FAILURE);
                 res._statusWasCalled.should.equal(true);
                 res._jsonWasCalled.should.equal(true);
                 res._setWasCalled.should.equal(true);
@@ -93,7 +114,7 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
                 res._json.error_description.should.equal("The token is invalid or has expired");
 
                 done();
-            }, 2000);
+            });
         });
 
         it("should validate a token without scope", function(done) {
@@ -114,7 +135,10 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
                 var req = _getStubRequest(token, null);
                 var res = _getStubResponse();
 
-                personaClient.validateHTTPBearerToken(req, res, function(err, result) {
+                personaClient.validateHTTPBearerToken(req, res, function validatedToken(err, result) {
+                    if (err) {
+                        return done(err);
+                    }
                     assert.equal(res._statusWasCalled, false);
                     assert.equal(res._jsonWasCalled, false);
                     assert.equal(res._setWasCalled, false);
@@ -143,7 +167,10 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
                 var req = _getStubRequest(token, "standard_user");
                 var res = _getStubResponse();
 
-                personaClient.validateHTTPBearerToken(req, res, function(err, result) {
+                personaClient.validateHTTPBearerToken(req, res, function validatedToken(err, result) {
+                    if (err) {
+                        return done(err);
+                    }
                     assert.equal(res._statusWasCalled, false);
                     assert.equal(res._jsonWasCalled, false);
                     assert.equal(res._setWasCalled, false);
@@ -172,10 +199,8 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
                 var req = _getStubRequest(token, "wibble");
                 var res = _getStubResponse();
 
-                personaClient.validateHTTPBearerToken(req, res, function() {
-                    done("validation passed when it should not have");
-                });
-                setTimeout(function(){
+                personaClient.validateHTTPBearerToken(req, res, function validatedToken(err) {
+                    err.should.be.equal(persona.errorTypes.INSUFFICIENT_SCOPE);
                     res._statusWasCalled.should.equal(true);
                     res._jsonWasCalled.should.equal(true);
                     res._setWasCalled.should.equal(true);
@@ -185,7 +210,7 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
                     res._json.error_description.should.equal("The supplied token is missing a required scope");
 
                     done();
-                }, 2000);
+                });
             });
         });
 
@@ -207,10 +232,8 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
                 var req = _getStubRequest(token, "standard_user");
                 var res = _getStubResponse();
 
-                personaClient.validateHTTPBearerToken(req, res, function() {
-                    done("validation passed when it should not have");
-                });
-                setTimeout(function() {
+                personaClient.validateHTTPBearerToken(req, res, function validatedToken(err, success) {
+                    err.should.be.equal(persona.errorTypes.VALIDATION_FAILURE);
                     res._statusWasCalled.should.equal(true);
                     res._jsonWasCalled.should.equal(true);
                     res._setWasCalled.should.equal(true);
@@ -220,7 +243,7 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
                     res._json.error_description.should.equal("The token is invalid or has expired");
 
                     done();
-                }, 2000);
+                });
             });
         });
 
@@ -243,7 +266,10 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
                 var req = _getStubRequest(token, "other_scope");
                 var res = _getStubResponse();
 
-                personaClient.validateHTTPBearerToken(req, res, function(err, result) {
+                personaClient.validateHTTPBearerToken(req, res, function validatedToken(err, result) {
+                    if (err) {
+                        return done(err);
+                    }
                     assert.equal(res._statusWasCalled, false);
                     assert.equal(res._jsonWasCalled, false);
                     assert.equal(res._setWasCalled, false);
@@ -273,7 +299,7 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
                 var req = _getStubRequest(token, "fatuser");
                 var res = _getStubResponse();
 
-                personaClient.validateHTTPBearerToken(req, res, function(error, result) {
+                personaClient.validateHTTPBearerToken(req, res, function validatedToken(error, result) {
                     if(error) {
                         return done(error);
                     }
@@ -307,7 +333,10 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
                 var req = _getStubRequest(token, "other_scope");
                 var res = _getStubResponse();
 
-                personaClient.validateHTTPBearerToken(req, res, function(err, result) {
+                personaClient.validateHTTPBearerToken(req, res, function validatedToken(err, result) {
+                    if (err) {
+                        return done(err);
+                    }
                     assert.equal(res._statusWasCalled, false);
                     assert.equal(res._jsonWasCalled, false);
                     assert.equal(res._setWasCalled, false);
@@ -338,10 +367,8 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
                 var req = _getStubRequest(token, "invalid");
                 var res = _getStubResponse();
 
-                personaClient.validateHTTPBearerToken(req, res, function() {
-                    done("validation passed when it should not have");
-                });
-                setTimeout(function() {
+                personaClient.validateHTTPBearerToken(req, res, function validatedToken(err) {
+                    err.should.be.equal(persona.errorTypes.INSUFFICIENT_SCOPE);
                     res._statusWasCalled.should.equal(true);
                     res._jsonWasCalled.should.equal(true);
                     res._setWasCalled.should.equal(true);
@@ -351,11 +378,12 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
                     res._json.error_description.should.equal("The supplied token is missing a required scope");
 
                     done();
-                }, 2000);
+                });
             });
         });
 
         it("should not validate a token when the server-side check returns 401", function(done) {
+
             var payload = {
                 scopeCount: 26
             };
@@ -374,10 +402,8 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
                 var req = _getStubRequest(token, "fatuser");
                 var res = _getStubResponse();
 
-                personaClient.validateHTTPBearerToken(req, res, function() {
-                    done("validation passed when it should not have");
-                });
-                setTimeout(function() {
+                personaClient.validateHTTPBearerToken(req, res, function(err, success) {
+                    err.should.be.equal(persona.errorTypes.VALIDATION_FAILURE);
                     res._statusWasCalled.should.equal(true);
                     res._jsonWasCalled.should.equal(true);
                     res._setWasCalled.should.equal(true);
@@ -387,7 +413,7 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
                     res._json.error_description.should.equal("The token is invalid or has expired");
 
                     done();
-                }, 2000);
+                });
             });
         });
 
@@ -410,10 +436,8 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
                 var req = _getStubRequest(token, "fatuser");
                 var res = _getStubResponse();
 
-                personaClient.validateHTTPBearerToken(req, res, function() {
-                    done("validation passed when it should not have");
-                });
-                setTimeout(function() {
+                personaClient.validateHTTPBearerToken(req, res, function(err, success) {
+                    err.should.be.equal(persona.errorTypes.COMMUNICATION_ISSUE);
                     res._statusWasCalled.should.equal(true);
                     res._jsonWasCalled.should.equal(true);
                     res._setWasCalled.should.equal(true);
@@ -423,7 +447,7 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
                     res._json.error_description.should.equal("communication_issue");
 
                     done();
-                }, 2000);
+                });
             });
         });
 
@@ -447,10 +471,8 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
                 var req = _getStubRequest(token, "standard_user");
                 var res = _getStubResponse();
 
-                personaClient.validateHTTPBearerToken(req, res, function() {
-                    done("validation passed when it should not have");
-                });
-                setTimeout(function(){
+                personaClient.validateHTTPBearerToken(req, res, function validatedToken(err) {
+                    err.should.be.equal(persona.errorTypes.VALIDATION_FAILURE);
                     res._statusWasCalled.should.equal(true);
                     res._jsonWasCalled.should.equal(true);
                     res._setWasCalled.should.equal(true);
@@ -460,7 +482,8 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
                     res._json.error_description.should.equal("The token is invalid or has expired");
 
                     done();
-                }, 2000);
+
+                });
             });
         });
 
@@ -479,13 +502,12 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
             };
 
             jwt.sign(payload, privateKey, jwtSigningOptions, function(token) {
+                nock('http://persona').get(/\/oauth\/keys/).reply(504);
                 var req = _getStubRequest(token, "standard_user");
                 var res = _getStubResponse();
 
-                personaClient.validateHTTPBearerToken(req, res, function() {
-                    done("validation passed when it should not have");
-                });
-                setTimeout(function(){
+                personaClient.validateHTTPBearerToken(req, res, function validatedToken(err, success) {
+                    err.should.be.equal(persona.errorTypes.COMMUNICATION_ISSUE);
                     res._statusWasCalled.should.equal(true);
                     res._jsonWasCalled.should.equal(true);
                     res._setWasCalled.should.equal(true);
@@ -495,13 +517,11 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
                     res._json.error_description.should.equal("communication_issue");
 
                     done();
-                }, 2000);
+                });
             });
         });
 
         it("should use a cached public key when validating a token", function(done) {
-
-
             var payload = {
                 scopes: [
                     "standard_user"
@@ -520,7 +540,11 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
             jwt.sign(payload, privateKey, jwtSigningOptions, function(token) {
                 var req = _getStubRequest(token, null);
                 var res = _getStubResponse();
-                personaClient.validateHTTPBearerToken(req, res, function(err, result) {
+
+                personaClient.validateHTTPBearerToken(req, res, function validatedToken(err, result) {
+                    if (err) {
+                        return done(err);
+                    }
                     assert.equal(res._statusWasCalled, false);
                     assert.equal(res._jsonWasCalled, false);
                     assert.equal(res._setWasCalled, false);
