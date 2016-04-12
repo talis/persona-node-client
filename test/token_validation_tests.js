@@ -14,6 +14,7 @@ var runBeforeEach = require("./utils").beforeEach;
 var runAfterEach = require("./utils").afterEach;
 var leche = require("leche");
 var withData = leche.withData;
+var lodash = require('lodash');
 
 describe("Persona Client Test Suite - Token Validation Tests", function() {
 
@@ -61,7 +62,7 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
         }
     }, function(personaClientConfig) {
         beforeEach(function(done) {
-            runBeforeEach(this.currentTest.title, "token_validation");
+            this.nockAssertions = runBeforeEach(this.currentTest.title, "token_validation");
 
             personaClient = persona.createClient(personaClientConfig);
             sinon.spy(personaClient.http, "request");
@@ -71,22 +72,31 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
             });
         });
 
-        afterEach(function() {
+        afterEach(function afterEachTest() {
+            if (this.nockAssertions) {
+                lodash.forEach(this.nockAssertions, function eachNock(nockAssertion) {
+                    nockAssertion.done();
+                });
+            }
+
             runAfterEach(this.currentTest.title, "token_validation");
             personaClient.http.request.restore();
         });
 
-        it('should retrieve cert straight away if auto update is on', function(done) {
-            nock('http://persona').get(/\/oauth\/keys/).reply(200, publicKey);
-            personaClientConfig.cert_background_refresh = true;
-            persona.createClient(personaClientConfig);
+        it('should retrieve cert straight away if auto update is on', function autoUpdateTest(done) {
+            var config = lodash.clone(personaClientConfig);
+            config.cert_background_refresh = true;
+
+            persona.PUBLIC_KEY_AUTO_REFRESH_TIMEOUT = 0.6;
+            var client = persona.createClient(config);
+
             setTimeout(function fin() {
+                clearInterval(client.refreshTimerId);
                 return done();
             }, 1000);
         });
 
         it("should not validate an invalid token", function(done) {
-            nock('http://persona').get(/\/oauth\/keys/).reply(200, publicKey);
             var req = _getStubRequest("skldfjlskj", null);
             var res = _getStubResponse();
 
@@ -122,7 +132,6 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
             };
 
             jwt.sign(payload, privateKey, jwtSigningOptions, function(token) {
-                nock('http://persona').get(/\/oauth\/keys/).reply(200, publicKey);
                 var req = _getStubRequest(token, null);
                 var res = _getStubResponse();
 
@@ -183,7 +192,6 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
             };
 
             jwt.sign(payload, privateKey, jwtSigningOptions, function(token) {
-                nock('http://persona').get(/\/oauth\/keys/).reply(200, publicKey);
                 var req = _getStubRequest(token, "wibble");
                 var res = _getStubResponse();
 
@@ -251,7 +259,6 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
             };
 
             jwt.sign(payload, privateKey, jwtSigningOptions, function(token) {
-                nock('http://persona').get(/\/oauth\/keys/).reply(200, publicKey);
                 var req = _getStubRequest(token, "other_scope");
                 var res = _getStubResponse();
 
@@ -282,7 +289,6 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
             jwt.sign(payload, privateKey, jwtSigningOptions, function(token) {
                 // We can't replay the recorded response as the token in that request will expire
                 nock("http://persona").head(/\/oauth\/tokens\/.*\?scope=fatuser/).reply(204);
-                nock('http://persona').get(/\/oauth\/keys/).reply(200, publicKey);
 
                 var req = _getStubRequest(token, "fatuser");
                 var res = _getStubResponse();
@@ -315,7 +321,6 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
 
             jwt.sign(payload, privateKey, jwtSigningOptions, function(token) {
                 // First respond that the scope is insufficient then respond ok for su
-                nock('http://persona').get(/\/oauth\/keys/).reply(200, publicKey);
                 nock("http://persona").head(/\/oauth\/tokens\/.*\?scope=other_scope/).reply(403);
                 nock("http://persona").head(/\/oauth\/tokens\/.*\?scope=su/).reply(204);
 
@@ -384,7 +389,6 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
 
             jwt.sign(payload, privateKey, jwtSigningOptions, function(token) {
                 // We can't replay the recorded response as the token in that request will expire
-                nock('http://persona').get(/\/oauth\/keys/).reply(200, publicKey);
                 nock("http://persona").head(/\/oauth\/tokens\/.*\?scope=fatuser/).reply(401);
 
                 var req = _getStubRequest(token, "fatuser");
