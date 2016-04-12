@@ -87,13 +87,13 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
             var config = lodash.clone(personaClientConfig);
             config.cert_background_refresh = true;
 
-            persona.PUBLIC_KEY_AUTO_REFRESH_TIMEOUT = 0.6;
+            persona.PUBLIC_KEY_AUTO_REFRESH_TIMEOUT = 1;
             var client = persona.createClient(config);
 
             setTimeout(function fin() {
                 clearInterval(client.refreshTimerId);
                 return done();
-            }, 3000);
+            }, 1500);
         });
 
         it("should not validate an invalid token", function(done) {
