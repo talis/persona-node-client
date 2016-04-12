@@ -9,7 +9,7 @@ var CacheService = require("cache-service");
 
 var PUBLIC_KEY_CACHE_NAME = "public_key";
 var CACHE_TIMEOUT = 60 * 10;
-var PUBLIC_KEY_AUTO_REFRESH_TIMEOUT = 60 * 9;
+var PUBLIC_KEY_AUTO_REFRESH_TIMEOUT = 60 * 7;
 
 // log severities
 var DEBUG = "debug";
