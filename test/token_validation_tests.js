@@ -74,7 +74,7 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
 
         afterEach(function afterEachTest() {
             if (this.nockAssertions) {
-                lodash.forEach(this.nockAssertions, function eachNock(nockAssertion) {
+                lodash.forEach(this.nockAssertions, function verifyEachNockRequest(nockAssertion) {
                     nockAssertion.done();
                 });
             }
@@ -136,7 +136,9 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
                 var res = _getStubResponse();
 
                 personaClient.validateHTTPBearerToken(req, res, function validatedToken(err, result) {
-                    (err === null).should.be.true;
+                    if (err) {
+                        return done(err);
+                    }
                     assert.equal(res._statusWasCalled, false);
                     assert.equal(res._jsonWasCalled, false);
                     assert.equal(res._setWasCalled, false);
@@ -166,7 +168,9 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
                 var res = _getStubResponse();
 
                 personaClient.validateHTTPBearerToken(req, res, function validatedToken(err, result) {
-                    (err === null).should.be.true;
+                    if (err) {
+                        return done(err);
+                    }
                     assert.equal(res._statusWasCalled, false);
                     assert.equal(res._jsonWasCalled, false);
                     assert.equal(res._setWasCalled, false);
@@ -263,7 +267,9 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
                 var res = _getStubResponse();
 
                 personaClient.validateHTTPBearerToken(req, res, function validatedToken(err, result) {
-                    (err === null).should.be.true;
+                    if (err) {
+                        return done(err);
+                    }
                     assert.equal(res._statusWasCalled, false);
                     assert.equal(res._jsonWasCalled, false);
                     assert.equal(res._setWasCalled, false);
@@ -328,7 +334,9 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
                 var res = _getStubResponse();
 
                 personaClient.validateHTTPBearerToken(req, res, function validatedToken(err, result) {
-                    (err === null).should.be.true;
+                    if (err) {
+                        return done(err);
+                    }
                     assert.equal(res._statusWasCalled, false);
                     assert.equal(res._jsonWasCalled, false);
                     assert.equal(res._setWasCalled, false);
@@ -534,7 +542,9 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
                 var res = _getStubResponse();
 
                 personaClient.validateHTTPBearerToken(req, res, function validatedToken(err, result) {
-                    (err === null).should.be.true;
+                    if (err) {
+                        return done(err);
+                    }
                     assert.equal(res._statusWasCalled, false);
                     assert.equal(res._jsonWasCalled, false);
                     assert.equal(res._setWasCalled, false);
