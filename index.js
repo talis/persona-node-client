@@ -8,8 +8,8 @@ var jwt = require("jsonwebtoken");
 var CacheService = require("cache-service");
 
 var PUBLIC_KEY_CACHE_NAME = "public_key";
-var CACHE_TIMEOUT = 60 * 10;
-var PUBLIC_KEY_AUTO_REFRESH_TIMEOUT = 60 * 7;
+var CACHE_TIMEOUT_SEC = 60 * 10; // 10 minutes
+var PUBLIC_KEY_AUTO_REFRESH_TIMEOUT_MS = 60 * 7 * 1000; // 7 minutes
 
 // log severities
 var DEBUG = "debug";
@@ -100,7 +100,7 @@ var PersonaClient = function (config) {
                 this.getPublicKey(function retrievedPublicKey() {
                     log('debug', 'retrieved public key');
                 }, true);
-            }.bind(this), PUBLIC_KEY_AUTO_REFRESH_TIMEOUT);
+            }.bind(this), PUBLIC_KEY_AUTO_REFRESH_TIMEOUT_MS);
         }.bind(this));
     }
 
@@ -116,8 +116,8 @@ PersonaClient.prototype.getPublicKey = function getPublicKey(cb, refresh) {
     var log = this.log.bind(this);
 
     var cachePublicKey = function cachePublicKey(publicKey) {
-        log('debug', 'Caching public key for ' + CACHE_TIMEOUT + 's');
-        this.tokenCache.set(PUBLIC_KEY_CACHE_NAME, publicKey, CACHE_TIMEOUT);
+        log('debug', 'Caching public key for ' + CACHE_TIMEOUT_SEC + 's');
+        this.tokenCache.set(PUBLIC_KEY_CACHE_NAME, publicKey, CACHE_TIMEOUT_SEC);
     }.bind(this);
 
     var getCachedPublicKey = function getCachedPublicKey(cb) {
