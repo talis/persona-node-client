@@ -23,21 +23,21 @@ describe("Persona Client Test Suite - Constructor & Token Tests", function() {
 
         it("should throw error if config.persona_host is not supplied", function(done) {
             var personaClient = function() {
-                return persona.createClient({});
+                return persona.createClient("test-suite",{});
             };
             personaClient.should.throw("You must specify the persona host");
             done();
         });
         it("should throw error if config.persona_port is not supplied", function(done) {
             var personaClient = function() {
-                return persona.createClient({persona_host: "persona"});
+                return persona.createClient("test-suite",{persona_host: "persona"});
             };
             personaClient.should.throw("You must specify the persona port");
             done();
         });
         it("should throw error if config.persona_scheme is not supplied", function(done) {
             var personaClient = function(){
-                return persona.createClient({
+                return persona.createClient("test-suite",{
                     persona_host: "persona",
                     persona_port: 80
                 });
@@ -47,7 +47,7 @@ describe("Persona Client Test Suite - Constructor & Token Tests", function() {
         });
         it("should throw error if config.persona_oauth_route is not supplied", function(done) {
             var personaClient = function() {
-                return persona.createClient({
+                return persona.createClient("test-suite",{
                     persona_host: "persona",
                     persona_port: 80,
                     persona_scheme: "http"
@@ -59,7 +59,7 @@ describe("Persona Client Test Suite - Constructor & Token Tests", function() {
 
         it("should NOT throw any error if all config params are defined", function(done) {
             var personaClient = function() {
-                return persona.createClient({
+                return persona.createClient("test-suite",{
                     persona_host: "persona",
                     persona_port: 80,
                     persona_scheme: "http",
@@ -133,7 +133,7 @@ describe("Persona Client Test Suite - Constructor & Token Tests", function() {
             });
 
             it("should throw error if there is no id", function(done) {
-                var personaClient = persona.createClient(personaClientConfig);
+                var personaClient = persona.createClient("test-suite",personaClientConfig);
 
                 var validateUrl = function() {
                     return personaClient.obtainToken(null, "bananas", function(err, data) {});
@@ -143,7 +143,7 @@ describe("Persona Client Test Suite - Constructor & Token Tests", function() {
                 done();
             });
             it("should throw error if there is no secret", function(done) {
-                var personaClient = persona.createClient(personaClientConfig);
+                var personaClient = persona.createClient("test-suite",personaClientConfig);
 
                 var validateUrl = function(){
                     return personaClient.obtainToken(oauthClient, null, function(err, data) {});
@@ -153,7 +153,7 @@ describe("Persona Client Test Suite - Constructor & Token Tests", function() {
                 done();
             });
             it("should return a token, and cache that token", function(done) {
-                var personaClient = persona.createClient(personaClientConfig);
+                var personaClient = persona.createClient("test-suite",personaClientConfig);
 
                 personaClient._removeTokenFromCache(oauthClient, oauthSecret, function(err) {
                     assert(err === null);
@@ -182,7 +182,7 @@ describe("Persona Client Test Suite - Constructor & Token Tests", function() {
                 });
             });
             it("should not return a token",function(done) {
-                var personaClient = persona.createClient(personaClientConfig);
+                var personaClient = persona.createClient("test-suite",personaClientConfig);
 
                 personaClient.obtainToken("primate","wrong_password",function(err, data) {
                     assert(err != null);

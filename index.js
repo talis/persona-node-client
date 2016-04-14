@@ -6,6 +6,9 @@ var querystring = require("querystring");
 var _ = require("lodash");
 var jwt = require("jsonwebtoken");
 var CacheService = require("cache-service");
+var fs = require("fs");
+
+var clientVer = JSON.parse(fs.readFileSync('package.json', 'utf8')).version || "unknown";
 
 var PUBLIC_KEY_CACHE_NAME = "public_key";
 var CACHE_TIMEOUT_SEC = 60 * 10; // 10 minutes
@@ -23,9 +26,11 @@ var ERROR_TYPES = {
 };
 
 /**
- * Constructor you must pass in a config object with the following properties set:
+ * Constructor you must pass in an appId string identifying your app, plus a config object with the
+ * following properties set:
  *
  * mandatory params
+ * appUA = "my_app"
  * config.persona_host = "localhost";
  * config.persona_port = 443;
  * config.persona_scheme = "https";
@@ -45,11 +50,20 @@ var ERROR_TYPES = {
  * This library stores no default configuration of its own. It relies on the application/service
  * it is embedded in to supply this information.
  *
- * @param config
+ * @param appUA an identifying user agent string for your app, compatible with user agent formatting
+ * as per https://tools.ietf.org/html/rfc7231#section-5.5.3 e.g. 'my-app', 'my-app/0.1',
+ * 'my-app/0.1 (Ubuntu/12.04; nodejs/0.10.13)`
+ * @param config object containing config
  * @constructor
  */
-var PersonaClient = function (config) {
+var PersonaClient = function (appUA, config) {
+    if (_.isObject(appId)) {
+        throw new Error("First parameter was an object, expected string appId");
+    }
+
     this.config = config || {};
+
+    this.userAgent = appUA+" persona-node-client/"+clientVer+" (nodejs/"+process.version+"; NODE_ENV="+process.env.NODE_ENV+")";
 
     var requiredAttributes = [
         'persona_host', 'persona_port', 'persona_scheme',
@@ -137,6 +151,9 @@ PersonaClient.prototype.getPublicKey = function getPublicKey(cb, refresh) {
             port: this.config.persona_port,
             path: '/oauth/keys',
             method: 'GET',
+            headers: {
+                'User-Agent': this.userAgent
+            }
         };
 
         log('debug', 'Fetching public key from Persona');
@@ -208,7 +225,10 @@ PersonaClient.prototype.validateToken = function (token, scope, next) {
             hostname: this.config.persona_host,
             port: this.config.persona_port,
             path: this.config.persona_oauth_route + token + "?scope=" + scope,
-            method: "HEAD"
+            method: "HEAD",
+            headers: {
+                'User-Agent': this.userAgent
+            }
         };
 
         this.http.request(options, function onSuccess(response) {
@@ -483,7 +503,8 @@ PersonaClient.prototype.obtainToken = function (id, secret, callback) {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/x-www-form-urlencoded',
-                            'Content-Length': post_data.length
+                            'Content-Length': post_data.length,
+                            'User-Agent': _this.userAgent
                         }
                     };
                 var req = _this.http.request(options, function (resp) {
@@ -604,7 +625,8 @@ PersonaClient.prototype.requestAuthorization = function (guid, title, id, secret
                     headers: {
                         'Authorization': 'Bearer ' + token.access_token,
                         'Content-Type': 'application/json',
-                        'Content-Length': post_data.length
+                        'Content-Length': post_data.length,
+                        'User-Agent': _this.userAgent
                     }
                 },
                 req = _this.http.request(options, function (resp) {
@@ -678,7 +700,8 @@ PersonaClient.prototype.deleteAuthorization = function (guid, authorization_clie
                     headers: {
                         'Authorization': 'Bearer ' + token.access_token,
                         'Content-Type': 'application/json',
-                        'Content-Length': 0
+                        'Content-Length': 0,
+                        'User-Agent': _this.userAgent
                     }
                 },
                 req = _this.http.request(options, function (resp) {
@@ -733,7 +756,8 @@ PersonaClient.prototype.updateProfile = function(guid, profile, token, callback)
             path: '/users/' + guid + '/profile',
             method: 'PUT',
             headers: {
-                'Authorization': 'Bearer ' + token
+                'Authorization': 'Bearer ' + token,
+                'User-Agent': _this.userAgent
             },
             data:{
                 profile: JSON.stringify(profile)
@@ -808,7 +832,8 @@ PersonaClient.prototype.getProfileByGuid = function(guid, token, callback){
         path: "/users/" + (_.isArray(guid) ? guid.join(",") : guid),
         method: "GET",
         headers: {
-            "Authorization": "Bearer " + token
+            "Authorization": "Bearer " + token,
+            'User-Agent': _this.userAgent
         }
     },
     req = _this.http.request(options, function (resp) {
@@ -891,7 +916,8 @@ PersonaClient.prototype.getScopesForUser = function(guid, token, callback) {
             path: "/1/clients/" + guid,
             method: 'GET',
             headers: {
-                Authorization: "Bearer " + token
+                Authorization: "Bearer " + token,
+                'User-Agent': _this.userAgent
             }
         },
         req = _this.http.request(options, function (resp) {
@@ -968,7 +994,8 @@ PersonaClient.prototype._setScopesForUser = function(guid, token, scopeChange, c
             json: true,
             headers: {
                 Authorization: "Bearer " + token,
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'User-Agent': _this.userAgent
             }
         },
         req = _this.http.request(options, function (resp) {
@@ -1087,10 +1114,11 @@ exports.errorTypes = ERROR_TYPES;
 /**
  * The only way to get an instance of the Persona Client is through
  * this method
+ * @param appUA
  * @param config
  * @returns {PersonaClient}
  */
-exports.createClient = function (config) {
-    return new PersonaClient(config);
+exports.createClient = function (appUA,config) {
+    return new PersonaClient(appUA,config);
 };
 

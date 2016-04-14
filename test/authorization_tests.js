@@ -57,7 +57,7 @@ describe("Persona Client Test Suite - Authorization Tests", function() {
         beforeEach(function createClientAndStubs() {
             runBeforeEach(this.currentTest.parent.title + " " + this.currentTest.title, "authorization", true);
 
-            personaClient = persona.createClient(personaClientConfig);
+            personaClient = persona.createClient("test-suite",personaClientConfig);
             sinon.stub(personaClient.tokenCache, "get").yields(null, null);
         });
 

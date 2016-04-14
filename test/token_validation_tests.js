@@ -64,7 +64,7 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
         beforeEach(function(done) {
             this.nockAssertions = runBeforeEach(this.currentTest.title, "token_validation");
 
-            personaClient = persona.createClient(personaClientConfig);
+            personaClient = persona.createClient("test-suite",personaClientConfig);
             sinon.spy(personaClient.http, "request");
             // Some tests rely on the cache being in a clean state
             personaClient.tokenCache.flush(function onFlushed() {
@@ -88,7 +88,7 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
             config.cert_background_refresh = true;
 
             persona.PUBLIC_KEY_AUTO_REFRESH_TIMEOUT = 1;
-            var client = persona.createClient(config);
+            var client = persona.createClient("test-suite",config);
 
             setTimeout(function fin() {
                 clearInterval(client.refreshTimerId);
