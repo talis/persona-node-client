@@ -57,7 +57,7 @@ var ERROR_TYPES = {
  * @constructor
  */
 var PersonaClient = function (appUA, config) {
-    if (_.isObject(appId)) {
+    if (_.isObject(appUA)) {
         throw new Error("First parameter was an object, expected string appId");
     }
 
