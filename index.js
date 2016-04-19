@@ -119,7 +119,6 @@ var PersonaClient = function (appUA, config) {
     this.http = require(this.config.persona_scheme);
 
     if (this.config.cert_background_refresh !== false) {
-        console.log(this.pk_auto_refresh_timeout_ms);
         this.getPublicKey(function retrievedCert() {
             this.refreshTimerId = setInterval(function refreshCert() {
                 this.getPublicKey(function retrievedPublicKey() {
@@ -138,7 +137,7 @@ var PersonaClient = function (appUA, config) {
  * @param {boolean=} refresh (optional) refresh the public key
  */
 PersonaClient.prototype.getPublicKey = function getPublicKey(cb, refresh) {
-    var log = console.log;//this.log.bind(this);
+    var log = this.log.bind(this);
 
     var cachePublicKey = function cachePublicKey(publicKey) {
         log('debug', 'Caching public key for ' + this.config.cert_timeout_sec + 's');
@@ -191,7 +190,6 @@ PersonaClient.prototype.getPublicKey = function getPublicKey(cb, refresh) {
     }.bind(this);
 
     if (refresh === true) {
-        log("Getting remote public key");
         getRemotePublicKey(function retrievedPublicKey(err, publicKey) {
             if (err) {
                 return cb(err, null);
@@ -200,7 +198,6 @@ PersonaClient.prototype.getPublicKey = function getPublicKey(cb, refresh) {
             return cb(null, publicKey);
         });
     } else {
-        log("Getting cached public key");
         getCachedPublicKey(function retrieveKey(publicKey) {
             if (publicKey) {
                 return cb(null, publicKey);
