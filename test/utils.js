@@ -3,6 +3,7 @@ var querystring = require("querystring");
 var fs = require("fs");
 var nock = require("nock");
 var nonMatchedEvents = [];
+var _ = require("lodash");
 
 var _getOAuthToken = function getOAuthToken(scope, callback) {
 
@@ -127,7 +128,7 @@ var getNonMatchedEvents = function() {
     return nonMatchedEvents;
 };
 
-var afterEach = function recordAndSaveHttpCallsIfEnabled(testFriendlyName, responsesFolder) {
+var afterEach = function recordAndSaveHttpCallsIfEnabled(testFriendlyName, responsesFolder, requestSpy) {
     if (getNonMatchedEvents().length>0) {
         throw new Error("Unmatched events detected");
     } else {
@@ -139,6 +140,16 @@ var afterEach = function recordAndSaveHttpCallsIfEnabled(testFriendlyName, respo
             var calls = nock.recorder.play();
             fs.writeFileSync(fileName, JSON.stringify(calls, null, 4));
             nock.restore();
+        }
+    }
+
+    if (requestSpy) {
+        for (var i=0;i<requestSpy.callCount;i++) {
+            _.map(['X-Request-Id','User-Agent'],function(header) {
+                if (!_.has(requestSpy.getCall(i),"args[0].headers['"+header+"']") && !_.isString(requestSpy.getCall(i).args[0].headers[header])) {
+                    throw new Error("request was not sent with string value for "+header);
+                }
+            });
         }
     }
 };

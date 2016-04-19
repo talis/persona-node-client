@@ -18,7 +18,7 @@ var lodash = require('lodash');
 
 describe("Persona Client Test Suite - Token Validation Tests", function() {
 
-    var personaClient;
+    var personaClient, spy;
     var privateKey = fs.readFileSync(__dirname + "/keys/privkey.pem", "utf-8");
     var publicKey = fs.readFileSync(__dirname + "/keys/pubkey.pem", "utf-8");
     withData({
@@ -65,7 +65,7 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
             this.nockAssertions = runBeforeEach(this.currentTest.title, "token_validation");
 
             personaClient = persona.createClient("test-suite",personaClientConfig);
-            sinon.spy(personaClient.http, "request");
+            spy = sinon.spy(personaClient.http, "request");
             // Some tests rely on the cache being in a clean state
             personaClient.tokenCache.flush(function onFlushed() {
                 done();
@@ -79,7 +79,7 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
                 });
             }
 
-            runAfterEach(this.currentTest.title, "token_validation");
+            runAfterEach(this.currentTest.title, "token_validation",spy);
             personaClient.http.request.restore();
         });
 
@@ -88,7 +88,6 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
             config.cert_background_refresh = true;
 
             var client = persona.createClient("test-suite",config);
-
             setTimeout(function fin() {
                 clearInterval(client.refreshTimerId);
                 return done();
@@ -156,6 +155,38 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
                     assert.equal(res._setWasCalled, false);
 
                     assert.equal(result, "ok");
+                    done();
+                });
+            });
+        });
+
+        it("should send the request id on req if supplied", function(done) {
+            var payload = {
+                scopes: [
+                    "standard_user"
+                ]
+            };
+
+            var jwtSigningOptions = {
+                jwtid: guid(),
+                algorithm: "RS256",
+                expiresIn: "1h",
+                audience: "standard_user"
+            };
+
+            jwt.sign(payload, privateKey, jwtSigningOptions, function(token) {
+                var req = _getStubRequest(token, null);
+                console.log(req);
+                req.header = function(key) {
+                    return (key === "X-Request-Id") ? "specific-token" : null;
+                };
+                var res = _getStubResponse();
+
+                personaClient.validateHTTPBearerToken(req, res, function validatedToken(err, result) {
+                    if (err) {
+                        return done(err);
+                    }
+                    assert.equal(spy.getCall(0).args[0].headers['X-Request-Id'], "specific-token");
                     done();
                 });
             });

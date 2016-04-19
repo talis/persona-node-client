@@ -7,6 +7,7 @@ var _ = require("lodash");
 var jwt = require("jsonwebtoken");
 var CacheService = require("cache-service");
 var fs = require("fs");
+var uuid = require('uuid');
 
 var clientVer = JSON.parse(fs.readFileSync('package.json', 'utf8')).version || "unknown";
 
@@ -39,7 +40,9 @@ var ERROR_TYPES = {
  * config.logger: <pass in a logger that has debug() and error() functions>
  * config.cache: { module: <redis|node-cache>, options: <cache-service-options> }
  * config.cert_background_refresh: true|false defaults to true
- * config.cert_timeout_sec: 600
+ * config.cert_timeout_sec: int, defaults to 600
+ * config.x_request_id: string, defaults to a generated uuid, or reads value of passed req when used
+ *   as middleware
  *
  * deprecated params:
  * config.redis_host
@@ -136,7 +139,7 @@ var PersonaClient = function (appUA, config) {
  * @param {callback} cb function(err, publicCert)
  * @param {boolean=} refresh (optional) refresh the public key
  */
-PersonaClient.prototype.getPublicKey = function getPublicKey(cb, refresh) {
+PersonaClient.prototype.getPublicKey = function getPublicKey(cb, refresh, xRequestId) {
     var log = this.log.bind(this);
 
     var cachePublicKey = function cachePublicKey(publicKey) {
@@ -162,7 +165,8 @@ PersonaClient.prototype.getPublicKey = function getPublicKey(cb, refresh) {
             path: '/oauth/keys',
             method: 'GET',
             headers: {
-                'User-Agent': this.userAgent
+                'User-Agent': this.userAgent,
+                'X-Request-Id': xRequestId || uuid.v1()
             }
         };
 
@@ -214,9 +218,15 @@ PersonaClient.prototype.getPublicKey = function getPublicKey(cb, refresh) {
  * Validate bearer token locally, via JWT verification.
  * @param {string} token -  Token to validate.
  * @param {string=} scope - Optional requested scope that if provided, is also used to validate against.
+ * @param {string=} xRequestId - Optional request ID to pass through.
  * @callback next - Called with either an error as the first param or "ok" as the result in the second param.
  */
-PersonaClient.prototype.validateToken = function (token, scope, next) {
+PersonaClient.prototype.validateToken = function (token, scope, xRequestId, next) {
+    if (_.isFunction(xRequestId)) {
+        next = xRequestId; // third param is actually next(), for backwards compat.
+        xRequestId = uuid.v1();
+    }
+
     if (!next) {
         throw "No callback (next attribute) provided";
     } else if (typeof next !== "function") {
@@ -237,7 +247,8 @@ PersonaClient.prototype.validateToken = function (token, scope, next) {
             path: this.config.persona_oauth_route + token + "?scope=" + scope,
             method: "HEAD",
             headers: {
-                'User-Agent': this.userAgent
+                'User-Agent': this.userAgent,
+                'X-Request-Id': xRequestId
             }
         };
 
@@ -302,7 +313,7 @@ PersonaClient.prototype.validateToken = function (token, scope, next) {
         }
 
         return verifyToken(publicKey);
-    });
+    },false,xRequestId);
 };
 
 /**
@@ -315,8 +326,10 @@ PersonaClient.prototype.validateHTTPBearerToken = function (request, response, n
     if (arguments.length > 3) {
         throw "Usage: validateHTTPBearerToken(request, response, next)";
     }
-    var token = this.getToken(request);
-    this.validateToken(token, request.param("scope"), function (error, validationResult) {
+    var token = this.getToken(request),
+        xRequestId = this.getXRequestId(request);
+
+    this.validateToken(token, request.param("scope"), xRequestId, function (error, validationResult) {
         if (!error) {
             next(null, validationResult);
             return;
@@ -480,14 +493,19 @@ PersonaClient.prototype.isPresignedUrlValid = function (presignedUrl, secret) {
  * Obtain a new token for the given id and secret
  * @param id
  * @param secret
+ * @param xRequestId
  * @param callback
  */
-PersonaClient.prototype.obtainToken = function (id, secret, callback) {
+PersonaClient.prototype.obtainToken = function (id, secret, xRequestId, callback) {
     if (!id) {
         throw new Error("You must provide an ID to obtain a token");
     }
     if (!secret) {
         throw new Error("You must provide a secret to obtain a token");
+    }
+    if (_.isFunction(xRequestId)) {
+        callback = xRequestId; // backwards compat for callback being 3rd param
+        xRequestId = uuid.v1();
     }
 
     var _this = this,
@@ -514,7 +532,8 @@ PersonaClient.prototype.obtainToken = function (id, secret, callback) {
                         headers: {
                             'Content-Type': 'application/x-www-form-urlencoded',
                             'Content-Length': post_data.length,
-                            'User-Agent': _this.userAgent
+                            'User-Agent': _this.userAgent,
+                            'X-Request-Id': xRequestId
                         }
                     };
                 var req = _this.http.request(options, function (resp) {
@@ -605,9 +624,15 @@ PersonaClient.prototype.obtainToken = function (id, secret, callback) {
  * @param title
  * @param id
  * @param secret
+ * @param xRequestId
  * @param callback
  */
-PersonaClient.prototype.requestAuthorization = function (guid, title, id, secret, callback) {
+PersonaClient.prototype.requestAuthorization = function (guid, title, id, secret, xRequestId, callback) {
+    if (_.isFunction(xRequestId)) {
+        callback = xRequestId; // third param is actually next(), for backwards compat.
+        xRequestId = uuid.v1();
+    }
+
     try {
         _.map([guid, title, id, secret], function (arg) {
             if (!_.isString(arg)) {
@@ -636,7 +661,8 @@ PersonaClient.prototype.requestAuthorization = function (guid, title, id, secret
                         'Authorization': 'Bearer ' + token.access_token,
                         'Content-Type': 'application/json',
                         'Content-Length': post_data.length,
-                        'User-Agent': _this.userAgent
+                        'User-Agent': _this.userAgent,
+                        'X-Request-Id': xRequestId
                     }
                 },
                 req = _this.http.request(options, function (resp) {
@@ -685,7 +711,12 @@ PersonaClient.prototype.requestAuthorization = function (guid, title, id, secret
  * @param secret
  * @param callback
  */
-PersonaClient.prototype.deleteAuthorization = function (guid, authorization_client_id, id, secret, callback) {
+PersonaClient.prototype.deleteAuthorization = function (guid, authorization_client_id, id, secret, xRequestId, callback) {
+    if (_.isFunction(xRequestId)) {
+        callback = xRequestId; // third param is actually next(), for backwards compat.
+        xRequestId = uuid.v1();
+    }
+
     try {
         _.map([guid, authorization_client_id, id, secret], function (arg) {
             if (!_.isString(arg)) {
@@ -711,7 +742,8 @@ PersonaClient.prototype.deleteAuthorization = function (guid, authorization_clie
                         'Authorization': 'Bearer ' + token.access_token,
                         'Content-Type': 'application/json',
                         'Content-Length': 0,
-                        'User-Agent': _this.userAgent
+                        'User-Agent': _this.userAgent,
+                        'X-Request-Id': xRequestId
                     }
                 },
                 req = _this.http.request(options, function (resp) {
@@ -738,9 +770,14 @@ PersonaClient.prototype.deleteAuthorization = function (guid, authorization_clie
  * @param {string} guid
  * @param {object} profile Profile data - must be an object containing profile params
  * @param {string} token
+ * @param {string} xRequestId
  * @callback callback
  */
-PersonaClient.prototype.updateProfile = function(guid, profile, token, callback) {
+PersonaClient.prototype.updateProfile = function(guid, profile, token, xRequestId, callback) {
+    if (_.isFunction(xRequestId)) {
+        callback = xRequestId; // third param is actually next(), for backwards compat.
+        xRequestId = uuid.v1();
+    }
 
     try {
         [guid, token].forEach(function checkParamIsString(param) {
@@ -767,7 +804,8 @@ PersonaClient.prototype.updateProfile = function(guid, profile, token, callback)
             method: 'PUT',
             headers: {
                 'Authorization': 'Bearer ' + token,
-                'User-Agent': _this.userAgent
+                'User-Agent': _this.userAgent,
+                'X-Request-Id': xRequestId
             },
             data:{
                 profile: JSON.stringify(profile)
@@ -819,9 +857,14 @@ PersonaClient.prototype.updateProfile = function(guid, profile, token, callback)
  * Get a user profile by a GUID
  * @param {string} guid
  * @param {string} token
+ * @param {string} xRequestId
  * @callback callback
  */
-PersonaClient.prototype.getProfileByGuid = function(guid, token, callback){
+PersonaClient.prototype.getProfileByGuid = function(guid, token, xRequestId, callback){
+    if (_.isFunction(xRequestId)) {
+        callback = xRequestId; // third param is actually next(), for backwards compat.
+        xRequestId = uuid.v1();
+    }
 
     try {
         _.map([guid, token], function (arg) {
@@ -843,7 +886,8 @@ PersonaClient.prototype.getProfileByGuid = function(guid, token, callback){
         method: "GET",
         headers: {
             "Authorization": "Bearer " + token,
-            'User-Agent': _this.userAgent
+            'User-Agent': _this.userAgent,
+            'X-Request-Id': xRequestId
         }
     },
     req = _this.http.request(options, function (resp) {
@@ -904,9 +948,15 @@ PersonaClient.prototype._removeTokenFromCache = function (id, secret, callback) 
  * Get scope information for a user
  * @param guid
  * @param token
+ * @param xRequestId
  * @param callback
  */
-PersonaClient.prototype.getScopesForUser = function(guid, token, callback) {
+PersonaClient.prototype.getScopesForUser = function(guid, token, xRequestId, callback) {
+    if (_.isFunction(xRequestId)) {
+        callback = xRequestId; // third param is actually next(), for backwards compat.
+        xRequestId = uuid.v1();
+    }
+
     try {
         _.map([guid, token], function (arg) {
             if (!_.isString(arg)) {
@@ -927,7 +977,8 @@ PersonaClient.prototype.getScopesForUser = function(guid, token, callback) {
             method: 'GET',
             headers: {
                 Authorization: "Bearer " + token,
-                'User-Agent': _this.userAgent
+                'User-Agent': _this.userAgent,
+                'X-Request-Id': xRequestId
             }
         },
         req = _this.http.request(options, function (resp) {
@@ -978,7 +1029,12 @@ PersonaClient.prototype.getScopesForUser = function(guid, token, callback) {
  * @param scopeChange
  * @param callback
  */
-PersonaClient.prototype._setScopesForUser = function(guid, token, scopeChange, callback) {
+PersonaClient.prototype._setScopesForUser = function(guid, token, scopeChange, xRequestId, callback) {
+    if (_.isFunction(xRequestId)) {
+        callback = xRequestId; // third param is actually next(), for backwards compat.
+        xRequestId = uuid.v1();
+    }
+
     try {
         _.map([guid, token], function (arg) {
             if (!_.isString(arg)) {
@@ -1005,7 +1061,8 @@ PersonaClient.prototype._setScopesForUser = function(guid, token, scopeChange, c
             headers: {
                 Authorization: "Bearer " + token,
                 'Content-Type': 'application/json',
-                'User-Agent': _this.userAgent
+                'User-Agent': _this.userAgent,
+                'X-Request-Id': xRequestId
             }
         },
         req = _this.http.request(options, function (resp) {
@@ -1117,6 +1174,18 @@ PersonaClient.prototype.debug = function (message) {
 };
 PersonaClient.prototype.error = function (message) {
     this.log(ERROR, message);
+};
+
+/**
+ * @param req Request||null
+ * @returns {*}
+ */
+PersonaClient.prototype.getXRequestId = function(req) {
+    if (_.isObject(req) && _.has(req,"header") && _.isFunction(req.header) && _.isString(req.header('X-Request-Id'))) {
+        return req.header('X-Request-Id');
+    } else {
+        return uuid.v1();
+    }
 };
 
 exports.errorTypes = ERROR_TYPES;
