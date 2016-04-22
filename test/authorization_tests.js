@@ -12,7 +12,7 @@ var withData = leche.withData;
 
 describe("Persona Client Test Suite - Authorization Tests", function() {
 
-    var personaClient;
+    var personaClient, spy;
     var oauthClient = process.env.PERSONA_TEST_OAUTH_CLIENT || "primate";
     var oauthSecret = process.env.PERSONA_TEST_OAUTH_SECRET || "bananas";
 
@@ -58,12 +58,14 @@ describe("Persona Client Test Suite - Authorization Tests", function() {
             runBeforeEach(this.currentTest.parent.title + " " + this.currentTest.title, "authorization", true);
 
             personaClient = persona.createClient("test-suite",personaClientConfig);
+            spy = sinon.spy(personaClient.http, "request");
             sinon.stub(personaClient.tokenCache, "get").yields(null, null);
         });
 
         afterEach(function restoreStubs() {
-            runAfterEach(this.currentTest.parent.title + " " + this.currentTest.title, "authorization", true);
+            runAfterEach(this.currentTest.parent.title + " " + this.currentTest.title, "authorization", true, spy);
             personaClient.tokenCache.get.restore();
+            personaClient.http.request.restore();
         });
 
         describe("Request authorization tests",function() {

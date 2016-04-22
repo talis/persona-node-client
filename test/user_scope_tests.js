@@ -6,6 +6,7 @@ var persona = require("../index");
 var runBeforeEach = require("./utils").beforeEach;
 var runAfterEach = require("./utils").afterEach;
 var leche = require("leche");
+var sinon = require("sinon");
 var withData = leche.withData;
 
 describe("Persona Client Test Suite - User Scope Tests", function() {
@@ -51,18 +52,20 @@ describe("Persona Client Test Suite - User Scope Tests", function() {
             cert_background_refresh: false,
         }
     }, function(personaClientConfig) {
+        var personaClient, spy;
         beforeEach(function() {
             runBeforeEach(this.currentTest.title, "user_scope");
+            personaClient = persona.createClient("test-suite",personaClientConfig);
+            spy = sinon.spy(personaClient.http, "request");
         });
 
         afterEach(function() {
             runAfterEach(this.currentTest.title, "user_scope");
+            personaClient.http.request.restore();
         });
 
         describe("- Get user scopes tests", function() {
             it("should throw an error if guid is not present", function(done) {
-                var personaClient = persona.createClient("test-suite",personaClientConfig);
-
                 personaClient.getScopesForUser(null,"token",function(err,data) {
                     assert(err != null);
                     err.should.be.a.String;

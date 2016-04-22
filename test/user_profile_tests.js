@@ -6,6 +6,7 @@ var persona = require("../index");
 var runBeforeEach = require("./utils").beforeEach;
 var runAfterEach = require("./utils").afterEach;
 var leche = require("leche");
+var sinon = require("sinon");
 var withData = leche.withData;
 
 describe("Persona Client Test Suite - User Profile Tests", function() {
@@ -51,18 +52,20 @@ describe("Persona Client Test Suite - User Profile Tests", function() {
             cert_background_refresh: false,
         }
     }, function(personaClientConfig) {
+        var personaClient, spy;
         beforeEach(function() {
             runBeforeEach(this.currentTest.title, "user_profile");
+            personaClient = persona.createClient("test-suite",personaClientConfig);
+            spy = sinon.spy(personaClient.http, "request");
         });
 
         afterEach(function() {
-            runAfterEach(this.currentTest.title, "user_profile");
+            runAfterEach(this.currentTest.title, "user_profile",spy);
+            personaClient.http.request.restore();
         });
 
         describe("- Get user profile by guid tests", function() {
             it("should throw an error if guid is not present", function(done) {
-                var personaClient = persona.createClient("test-suite",personaClientConfig);
-
                 personaClient.getProfileByGuid(null,"",function(err,data) {
                     assert(err!=null);
                     err.should.be.a.String;
@@ -72,8 +75,6 @@ describe("Persona Client Test Suite - User Profile Tests", function() {
                 });
             });
             it("should throw an error if guid is not a string", function(done) {
-                var personaClient = persona.createClient("test-suite",personaClientConfig);
-
                 personaClient.getProfileByGuid({},"token",function(err,data) {
                     assert(err!=null);
                     err.should.be.a.String;
@@ -83,8 +84,6 @@ describe("Persona Client Test Suite - User Profile Tests", function() {
                 });
             });
             it("should throw an error if token is not present", function(done){
-                var personaClient = persona.createClient("test-suite",personaClientConfig);
-
                 personaClient.getProfileByGuid("GUID",null,function(err,data) {
                     assert(err!=null);
                     err.should.be.a.String;
@@ -94,8 +93,6 @@ describe("Persona Client Test Suite - User Profile Tests", function() {
                 });
             });
             it("should throw an error if token is not a string", function(done){
-                var personaClient = persona.createClient("test-suite",personaClientConfig);
-
                 personaClient.getProfileByGuid("GUID",{},function(err,data) {
                     assert(err!=null);
                     err.should.be.a.String;
@@ -105,7 +102,6 @@ describe("Persona Client Test Suite - User Profile Tests", function() {
                 });
             });
             it("should fail with a status code of 404 for a user not found", function(done){
-                var personaClient = persona.createClient("test-suite",personaClientConfig);
                 personaClient.obtainToken(oauthClient, oauthSecret, function(err, data1) {
                     personaClient.getProfileByGuid('GUID', data1.access_token, function(err, data){
                         assert(err!=null);
@@ -133,8 +129,6 @@ describe("Persona Client Test Suite - User Profile Tests", function() {
                     }
                 };
 
-                var personaClient = persona.createClient("test-suite",personaClientConfig);
-
                 personaClient.obtainToken(oauthClient, oauthSecret, function(error, token) {
                     assert(error == null);
                     personaClient.getProfileByGuid('fdgNy6QWGmIAl7BRjEsFtA', token.access_token, function(error, data) {
@@ -150,8 +144,6 @@ describe("Persona Client Test Suite - User Profile Tests", function() {
 
         describe("- Update user profile tests", function(){
             it("should throw an error if guid is not set", function(done){
-                var personaClient = persona.createClient("test-suite",personaClientConfig);
-
                 personaClient.updateProfile(null,{}, "",function(err,data) {
                     assert(err!=null);
                     err.should.be.a.String;
@@ -161,8 +153,6 @@ describe("Persona Client Test Suite - User Profile Tests", function() {
                 });
             });
             it("should throw an error if guid is not a string", function(done){
-                var personaClient = persona.createClient("test-suite",personaClientConfig);
-
                 personaClient.updateProfile({},{}, "",function(err,data) {
                     assert(err!=null);
                     err.should.be.a.String;
@@ -172,8 +162,6 @@ describe("Persona Client Test Suite - User Profile Tests", function() {
                 });
             });
             it("should throw an error if profile is not set", function(done){
-                var personaClient = persona.createClient("test-suite",personaClientConfig);
-
                 personaClient.updateProfile("GUID",null, "",function(err,data) {
                     assert(err!=null);
                     err.should.be.a.String;
@@ -183,8 +171,6 @@ describe("Persona Client Test Suite - User Profile Tests", function() {
                 });
             });
             it("should throw an error if profile not an object", function(done){
-                var personaClient = persona.createClient("test-suite",personaClientConfig);
-
                 personaClient.updateProfile("GUID","PROFILE", "",function(err,data) {
                     assert(err!=null);
                     err.should.be.a.String;
@@ -194,8 +180,6 @@ describe("Persona Client Test Suite - User Profile Tests", function() {
                 });
             });
             it("should throw an error if token is not set", function(done){
-                var personaClient = persona.createClient("test-suite",personaClientConfig);
-
                 personaClient.updateProfile("GUID",{}, null,function(err,data) {
                     assert(err!=null);
                     err.should.be.a.String;
@@ -205,8 +189,6 @@ describe("Persona Client Test Suite - User Profile Tests", function() {
                 });
             });
             it("should throw an error if token it not a string", function(done){
-                var personaClient = persona.createClient("test-suite",personaClientConfig);
-
                 personaClient.updateProfile("GUID",{}, {},function(err,data) {
                     assert(err!=null);
                     err.should.be.a.String;
@@ -231,8 +213,6 @@ describe("Persona Client Test Suite - User Profile Tests", function() {
                         "email": "test.tn@talis.com"
                     }
                 };
-
-                var personaClient = persona.createClient("test-suite",personaClientConfig);
 
                 personaClient.obtainToken(oauthClient, oauthSecret, function(error, token) {
                     personaClient.updateProfile('fdgNy6QWGmIAl7BRjEsFtA', expected.profile, token.access_token, function(error, data) {
