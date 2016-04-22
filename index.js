@@ -25,17 +25,17 @@ var ERROR_TYPES = {
 };
 
 /**
- * Constructor you must pass in an appId string identifying your app, plus a config object with the
+ * Constructor you must pass in an appId string identifying your app, plus an optional config object with the
  * following properties set:
  *
  * mandatory params
  * appUA = "my_app"
- * config.persona_host = "localhost";
- * config.persona_port = 443;
- * config.persona_scheme = "https";
- * config.persona_oauth_route = "/oauth/tokens/";
  *
  * optional params:
+ * config.persona_host = string, defaults to "users.talis.com";
+ * config.persona_port = string|integer, defaults to 443;
+ * config.persona_scheme = string, defaults to "https";
+ * config.persona_oauth_route = string, defaults to "/oauth/tokens/";
  * config.enable_debug : true|false
  * config.logger: <pass in a logger that has debug() and error() functions>
  * config.cache: { module: <redis|node-cache>, options: <cache-service-options> }
@@ -57,10 +57,11 @@ var ERROR_TYPES = {
  * @constructor
  */
 var PersonaClient = function (appUA, config) {
-    if (_.isObject(appUA)) {
-        throw new Error("First parameter was an object, expected string appId");
+    if (!_.isString(appUA)) {
+        throw new Error("Expected string appId as first parameter");
     }
 
+    // establish config, including defaults
     this.config = config || {};
     if (!_.has(this.config,"cert_timeout_sec")) {
         this.config.cert_timeout_sec = 600;
@@ -69,6 +70,7 @@ var PersonaClient = function (appUA, config) {
         if (_.isNaN(this.config.cert_timeout_sec)) {
             throw new Error("Cert config timeout could not be parsed as integer");
         }
+        // now set refresh interval ms to be equal or just under cert timeout sec
         this.pk_auto_refresh_timeout_ms =  (this.config.cert_timeout_sec>10) ? (this.config.cert_timeout_sec - 10) * 1000 : this.config.cert_timeout_sec * 1000;
     }
 
@@ -76,19 +78,13 @@ var PersonaClient = function (appUA, config) {
       " persona-node-client/"+clientVer+" (nodejs/"+process.version+"; NODE_ENV="+
       process.env.NODE_ENV+")" : appUA + " persona-node-client/"+clientVer;
 
-    var requiredAttributes = [
-        'persona_host', 'persona_port', 'persona_scheme',
-        'persona_oauth_route'
-    ];
-
-    for (var i = 0; i < requiredAttributes.length; i++) {
-        var attribute = requiredAttributes[i];
-
-        if (this.config[attribute] === undefined) {
-            var name = attribute.replace(/_/g, ' ');
-            throw new Error("You must specify the " + name);
-        }
-    }
+    // default connection config
+    _.merge({
+        persona_host: "users.talis.com",
+        persona_port: 443,
+        persona_scheme: "https",
+        persona_oauth_route: "/oauth/tokens/"
+    },this.config);
 
     var CacheServiceModule;
     var cacheOptions = {};

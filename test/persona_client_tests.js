@@ -21,42 +21,6 @@ describe("Persona Client Test Suite - Constructor & Token Tests", function() {
 
     describe("- Constructor tests", function() {
 
-        it("should throw error if config.persona_host is not supplied", function(done) {
-            var personaClient = function() {
-                return persona.createClient("test-suite",{});
-            };
-            personaClient.should.throw("You must specify the persona host");
-            done();
-        });
-        it("should throw error if config.persona_port is not supplied", function(done) {
-            var personaClient = function() {
-                return persona.createClient("test-suite",{persona_host: "persona"});
-            };
-            personaClient.should.throw("You must specify the persona port");
-            done();
-        });
-        it("should throw error if config.persona_scheme is not supplied", function(done) {
-            var personaClient = function(){
-                return persona.createClient("test-suite",{
-                    persona_host: "persona",
-                    persona_port: 80
-                });
-            };
-            personaClient.should.throw("You must specify the persona scheme");
-            done();
-        });
-        it("should throw error if config.persona_oauth_route is not supplied", function(done) {
-            var personaClient = function() {
-                return persona.createClient("test-suite",{
-                    persona_host: "persona",
-                    persona_port: 80,
-                    persona_scheme: "http"
-                });
-            };
-            personaClient.should.throw("You must specify the persona oauth route");
-            done();
-        });
-
         it("should NOT throw any error if all config params are defined", function(done) {
             var personaClient = function() {
                 return persona.createClient("test-suite",{
