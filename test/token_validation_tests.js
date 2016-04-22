@@ -28,7 +28,7 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
             persona_scheme: process.env.PERSONA_TEST_SCHEME || "http",
             persona_oauth_route: "/oauth/tokens/",
             enable_debug: false,
-            cert_background_refresh: false,
+            cert_background_refresh: false
         },
         "redis": {
             persona_host: process.env.PERSONA_TEST_HOST || "persona",
@@ -178,7 +178,7 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
                 var req = _getStubRequest(token, null);
                 console.log(req);
                 req.header = function(key) {
-                    return (key === "X-Request-Id") ? "specific-token" : null;
+                    return (key === "X-Request-Id") ? "specific-id" : null;
                 };
                 var res = _getStubResponse();
 
@@ -186,7 +186,7 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
                     if (err) {
                         return done(err);
                     }
-                    assert.equal(spy.getCall(0).args[0].headers['X-Request-Id'], "specific-token");
+                    assert.equal(spy.getCall(0).args[0].headers['X-Request-Id'], "specific-id");
                     done();
                 });
             });

@@ -9,7 +9,7 @@ var CacheService = require("cache-service");
 var fs = require("fs");
 var uuid = require('uuid');
 
-var clientVer = JSON.parse(fs.readFileSync('package.json', 'utf8')).version || "unknown";
+var clientVer = JSON.parse(fs.readFileSync("package.json", "utf8")).version || "unknown";
 
 var PUBLIC_KEY_CACHE_NAME = "public_key";
 
@@ -27,9 +27,6 @@ var ERROR_TYPES = {
 /**
  * Constructor you must pass in an appId string identifying your app, plus an optional config object with the
  * following properties set:
- *
- * mandatory params
- * appUA = "my_app"
  *
  * optional params:
  * config.persona_host = string, defaults to "users.talis.com";
@@ -320,8 +317,8 @@ PersonaClient.prototype.validateHTTPBearerToken = function (request, response, n
     if (arguments.length > 3) {
         throw "Usage: validateHTTPBearerToken(request, response, next)";
     }
-    var token = this.getToken(request),
-        xRequestId = this.getXRequestId(request);
+    var token = this.getToken(request);
+    var xRequestId = this.getXRequestId(request);
 
     this.validateToken(token, request.param("scope"), xRequestId, function (error, validationResult) {
         if (!error) {
