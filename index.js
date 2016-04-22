@@ -41,8 +41,6 @@ var ERROR_TYPES = {
  * config.cache: { module: <redis|node-cache>, options: <cache-service-options> }
  * config.cert_background_refresh: true|false defaults to true
  * config.cert_timeout_sec: int, defaults to 600
- * config.x_request_id: string, defaults to a generated uuid, or reads value of passed req when used
- *   as middleware
  *
  * deprecated params:
  * config.redis_host
