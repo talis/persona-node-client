@@ -113,9 +113,9 @@ var PersonaClient = function (appUA, config) {
     this.http = require(this.config.persona_scheme);
 
     if (this.config.cert_background_refresh !== false) {
-        this.getPublicKey(function retrievedCert() {
+        this._getPublicKey(function retrievedCert() {
             this.refreshTimerId = setInterval(function refreshCert() {
-                this.getPublicKey(function retrievedPublicKey() {
+                this._getPublicKey(function retrievedPublicKey() {
                     log('debug', 'retrieved public key');
                 }, true);
             }.bind(this), this.pk_auto_refresh_timeout_ms);
@@ -129,8 +129,9 @@ var PersonaClient = function (appUA, config) {
  * Retrieve Persona's public key that is used to sign the JWTs.
  * @param {callback} cb function(err, publicCert)
  * @param {boolean=} refresh (optional) refresh the public key
+ * @private
  */
-PersonaClient.prototype.getPublicKey = function getPublicKey(cb, refresh, xRequestId) {
+PersonaClient.prototype._getPublicKey = function getPublicKey(cb, refresh, xRequestId) {
     var log = this.log.bind(this);
 
     var cachePublicKey = function cachePublicKey(publicKey) {
@@ -298,7 +299,7 @@ PersonaClient.prototype.validateToken = function (token, scope, xRequestId, next
         });
     }.bind(this);
 
-    this.getPublicKey(function retrievedPublicKey(err, publicKey) {
+    this._getPublicKey(function retrievedPublicKey(err, publicKey) {
         if (err) {
             return next(err, null);
         }
@@ -1172,7 +1173,7 @@ PersonaClient.prototype.error = function (message) {
  * @returns {*}
  */
 PersonaClient.prototype.getXRequestId = function(req) {
-    if (_.isObject(req) && _.has(req,"header") && _.isFunction(req.header) && _.isString(req.header('X-Request-Id'))) {
+    if (_.has(req,"header") && _.isFunction(req.header) && _.isString(req.header('X-Request-Id'))) {
         return req.header('X-Request-Id');
     } else {
         return uuid.v1();
