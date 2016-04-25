@@ -100,20 +100,20 @@ describe("Persona Client Test Suite - Constructor & Token Tests", function() {
                 var personaClient = persona.createClient("test-suite",personaClientConfig);
 
                 var validateUrl = function() {
-                    return personaClient.obtainToken(null, "bananas", function(err, data) {});
+                    return personaClient.obtainToken({id: null, secret: "bananas"}, function(err, data) {});
                 };
 
-                validateUrl.should.throw("You must provide an ID to obtain a token");
+                validateUrl.should.throw("id in opts cannot be empty");
                 done();
             });
             it("should throw error if there is no secret", function(done) {
                 var personaClient = persona.createClient("test-suite",personaClientConfig);
 
                 var validateUrl = function(){
-                    return personaClient.obtainToken(oauthClient, null, function(err, data) {});
+                    return personaClient.obtainToken({id: oauthClient, secret: null}, function(err, data) {});
                 };
 
-                validateUrl.should.throw("You must provide a secret to obtain a token");
+                validateUrl.should.throw("secret in opts cannot be empty");
                 done();
             });
             it("should return a token, and cache that token", function(done) {
@@ -121,7 +121,7 @@ describe("Persona Client Test Suite - Constructor & Token Tests", function() {
 
                 personaClient._removeTokenFromCache(oauthClient, oauthSecret, function(err) {
                     assert(err === null);
-                    personaClient.obtainToken(oauthClient, oauthSecret, function(err, data1) {
+                    personaClient.obtainToken({id: oauthClient, secret: oauthSecret}, function(err, data1) {
                         assert(err===null);
                         data1.should.have.property("access_token");
                         data1.should.have.property("expires_in");
@@ -130,7 +130,7 @@ describe("Persona Client Test Suite - Constructor & Token Tests", function() {
                         data1.should.have.property("token_type");
                         clock.tick(1000); //move clock forward by 1s to make sure expires_in is different
 
-                        personaClient.obtainToken(oauthClient, oauthSecret, function(err, data2) {
+                        personaClient.obtainToken({id: oauthClient, secret: oauthSecret}, function(err, data2) {
                             assert(err===null);
                             data2.should.have.property("access_token");
                             data2.should.have.property("expires_in");
@@ -148,7 +148,7 @@ describe("Persona Client Test Suite - Constructor & Token Tests", function() {
             it("should not return a token",function(done) {
                 var personaClient = persona.createClient("test-suite",personaClientConfig);
 
-                personaClient.obtainToken("primate","wrong_password",function(err, data) {
+                personaClient.obtainToken({id: "primate", secret: "wrong_password"},function(err, data) {
                     assert(err != null);
                     err.should.be.a.String;
                     err.should.equal("Generate token failed with status code 400");

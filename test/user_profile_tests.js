@@ -102,7 +102,7 @@ describe("Persona Client Test Suite - User Profile Tests", function() {
                 });
             });
             it("should fail with a status code of 404 for a user not found", function(done){
-                personaClient.obtainToken(oauthClient, oauthSecret, function(err, data1) {
+                personaClient.obtainToken({id: oauthClient, secret: oauthSecret}, function(err, data1) {
                     personaClient.getProfileByGuid('GUID', data1.access_token, function(err, data){
                         assert(err!=null);
                         err.should.be.a.String;
@@ -129,7 +129,7 @@ describe("Persona Client Test Suite - User Profile Tests", function() {
                     }
                 };
 
-                personaClient.obtainToken(oauthClient, oauthSecret, function(error, token) {
+                personaClient.obtainToken({id: oauthClient, secret: oauthSecret}, function(error, token) {
                     assert(error == null);
                     personaClient.getProfileByGuid('fdgNy6QWGmIAl7BRjEsFtA', token.access_token, function(error, data) {
                         assert(error == null);
@@ -214,7 +214,7 @@ describe("Persona Client Test Suite - User Profile Tests", function() {
                     }
                 };
 
-                personaClient.obtainToken(oauthClient, oauthSecret, function(error, token) {
+                personaClient.obtainToken({id: oauthClient, secret: oauthSecret}, function(error, token) {
                     personaClient.updateProfile('fdgNy6QWGmIAl7BRjEsFtA', expected.profile, token.access_token, function(error, data) {
                         assert(error == null);
                         assert(data != null);

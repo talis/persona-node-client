@@ -114,7 +114,7 @@ describe("Persona Client Test Suite - User Scope Tests", function() {
             it("should throw an error if guid is not valid", function(done) {
                 var personaClient = persona.createClient("test-suite",personaClientConfig);
 
-                personaClient.obtainToken(oauthClient, oauthSecret, function(err, data1) {
+                personaClient.obtainToken({id: oauthClient, secret: oauthSecret}, function(err, data1) {
                     personaClient.getScopesForUser("guid", data1.access_token, function(err, data) {
                         assert(err != null);
                         err.should.be.a.String;
@@ -131,7 +131,7 @@ describe("Persona Client Test Suite - User Scope Tests", function() {
 
                 var personaClient = persona.createClient("test-suite",personaClientConfig);
 
-                personaClient.obtainToken(oauthClient, oauthSecret, function(err, data1) {
+                personaClient.obtainToken({id: oauthClient, secret: oauthSecret}, function(err, data1) {
                     personaClient.getScopesForUser('fdgNy6QWGmIAl7BRjEsFtk', data1.access_token, function(err, data) {
                         assert(err == null);
                         assert(data != null);
@@ -231,7 +231,7 @@ describe("Persona Client Test Suite - User Scope Tests", function() {
             it("should return no error if add scope successful", function(done) {
                 var personaClient = persona.createClient("test-suite",personaClientConfig);
 
-                personaClient.obtainToken(oauthClient, oauthSecret, function(err, data1) {
+                personaClient.obtainToken({id: oauthClient, secret: oauthSecret}, function(err, data1) {
                     personaClient.addScopeToUser('fdgNy6QWGmIAl7BRjEsFtk', data1.access_token, "test_scope", function(err, data){
                         assert(err == null);
                         assert(data == null);
@@ -329,7 +329,7 @@ describe("Persona Client Test Suite - User Scope Tests", function() {
             it("should return no error if remove scope successful", function(done) {
                 var personaClient = persona.createClient("test-suite",personaClientConfig);
 
-                personaClient.obtainToken(oauthClient, oauthSecret, function(err, data1) {
+                personaClient.obtainToken({id: oauthClient, secret: oauthSecret}, function(err, data1) {
                     personaClient.removeScopeFromUser('fdgNy6QWGmIAl7BRjEsFtk', data1.access_token, "test_scope", function(err, data){
                         assert(err == null);
                         assert(data == null);

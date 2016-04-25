@@ -228,12 +228,7 @@ PersonaClient.prototype.validateToken = function (opts, next) {
     validateOpts(opts,['token']);
     var token = opts.token;
     var scope = opts.scope;
-    var xRequestId = opts.xRequestId;
-
-    if (_.isFunction(xRequestId)) {
-        next = xRequestId; // third param is actually next(), for backwards compat.
-        xRequestId = uuid.v1();
-    }
+    var xRequestId = opts.xRequestId || uuid.v1();
 
     if (!next) {
         throw "No callback (next attribute) provided";
@@ -406,6 +401,7 @@ PersonaClient.prototype._getToken = function (req) {
  * @param secret
  * @param expires
  * @param callback
+ * @deprecated since version 3.0.0
  */
 PersonaClient.prototype.presignUrl = function (urlToSign, secret, expires, callback) {
     if (!urlToSign) {
@@ -447,6 +443,7 @@ PersonaClient.prototype.presignUrl = function (urlToSign, secret, expires, callb
  * @param presignedUrl
  * @param secret
  * @param callback
+ * @deprecated since version 3.0.0
  */
 PersonaClient.prototype.isPresignedUrlValid = function (presignedUrl, secret) {
     if (!presignedUrl) {
@@ -500,25 +497,17 @@ PersonaClient.prototype.isPresignedUrlValid = function (presignedUrl, secret) {
 
 /**
  * Obtain a new token for the given id and secret
- * @param id
- * @param secret
- * @param xRequestId
+ * @param opts array, id and secret are mandatory, xRequestId is optional
  * @param callback
  */
-PersonaClient.prototype.obtainToken = function (id, secret, xRequestId, callback) {
-    if (!id) {
-        throw new Error("You must provide an ID to obtain a token");
-    }
-    if (!secret) {
-        throw new Error("You must provide a secret to obtain a token");
-    }
-    if (_.isFunction(xRequestId)) {
-        callback = xRequestId; // backwards compat for callback being 3rd param
-        xRequestId = uuid.v1();
-    }
+PersonaClient.prototype.obtainToken = function (opts, callback) {
+    validateOpts(opts,["id","secret"]);
+    var id = opts.id;
+    var secret = opts.secret;
+    var xRequestId = opts.xRequestId || uuid.v1();
 
-    var _this = this,
-        cacheKey = "obtain_token:" + cryptojs.HmacSHA256(id, secret);
+    var _this = this;
+    var cacheKey = "obtain_token:" + cryptojs.HmacSHA256(id, secret);
 
     // try cache first
     this.tokenCache.get(cacheKey, function (err, reply) {
@@ -617,7 +606,7 @@ PersonaClient.prototype.obtainToken = function (id, secret, xRequestId, callback
                         callback(err, null);
                     } else {
                         // iterate
-                        _this.obtainToken(id, secret, callback);
+                        _this.obtainToken({id: id, secret: secret, xRequestId: xRequestId}, callback);
                     }
                 });
             }
@@ -654,7 +643,7 @@ PersonaClient.prototype.requestAuthorization = function (guid, title, id, secret
     }
 
     var _this = this;
-    _this.obtainToken (id,secret,function (err,token) { // todo: push down into person itself. You should be able to request an authorization using basic auth with client id/secret
+    _this.obtainToken ({id: id,secret: secret, xRequestId: xRequestId},function (err,token) { // todo: push down into person itself. You should be able to request an authorization using basic auth with client id/secret
         if (err) {
             callback("Request authorization failed with error: "+err,null);
         } else {
@@ -738,7 +727,7 @@ PersonaClient.prototype.deleteAuthorization = function (guid, authorization_clie
     }
 
     var _this = this;
-    _this.obtainToken(id,secret,function (err,token) { // todo: push down into person itself. You should be able to request an authorization using basic auth with client id/secret
+    _this.obtainToken({id: id,secret: secret, xRequestId: xRequestId},function (err,token) { // todo: push down into person itself. You should be able to request an authorization using basic auth with client id/secret
         if (err) {
             callback("Request authorization failed with error: "+err);
         } else {
