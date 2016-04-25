@@ -831,27 +831,15 @@ PersonaClient.prototype.updateProfile = function(opts, callback) {
 
 /**
  * Get a user profile by a GUID
- * @param {string} guid
- * @param {string} token
- * @param {string} xRequestId
+ * @param {object} opts - mandatory guid and token; optional xRequestId
+ * @param {function} callback
  * @callback callback
  */
-PersonaClient.prototype.getProfileByGuid = function(guid, token, xRequestId, callback){
-    if (_.isFunction(xRequestId)) {
-        callback = xRequestId; // third param is actually next(), for backwards compat.
-        xRequestId = uuid.v1();
-    }
-
-    try {
-        _.map([guid, token], function (arg) {
-            if (!_.isString(arg)) {
-                throw "guid and token are required strings";
-            }
-        });
-    } catch (e) {
-        callback(e,null);
-        return;
-    }
+PersonaClient.prototype.getProfileByGuid = function(opts, callback){
+    validateOpts(opts,{guid: _.isString,token: _.isString});
+    var guid = opts.guid;
+    var token = opts.token;
+    var xRequestId = opts.xRequestId || uuid.v1();
 
     var _this = this;
     // Get a profile

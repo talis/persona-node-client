@@ -66,45 +66,38 @@ describe("Persona Client Test Suite - User Profile Tests", function() {
         });
 
         describe("- Get user profile by guid tests", function() {
-            it("should throw an error if guid is not present", function(done) {
-                personaClient.getProfileByGuid(null,"",function(err,data) {
-                    assert(err!=null);
-                    err.should.be.a.String;
-                    err.should.equal("guid and token are required strings");
-                    assert(data===null);
-                    done();
+            _.map(["guid","token"],function(optsKey) {
+                var goodOpts = {guid: "some_guid", profile: {}, token: "some_token"};
+                it("should throw an error if "+optsKey+" is not set", function(done) {
+                    var badOpts = _.clone(goodOpts);
+                    badOpts[optsKey] = null;
+                    try {
+                        personaClient.getProfileByGuid(badOpts,function(err,data) {
+                            done("callback should not be invoked");
+                        });
+                    } catch (err) {
+                        err.message.should.equal(optsKey+" in opts cannot be empty");
+                        done();
+                    }
+                });
+
+                it("should throw an error if "+optsKey+" is not a string", function(done) {
+                    var badOpts = _.clone(goodOpts);
+                    badOpts[optsKey] = {foo:"bar"};
+                    try {
+                        personaClient.getProfileByGuid(badOpts,function(err,data) {
+                            done("callback should not be invoked");
+                        });
+                    } catch (err) {
+                        err.message.should.equal(optsKey+" failed isString validation");
+                        done();
+                    }
                 });
             });
-            it("should throw an error if guid is not a string", function(done) {
-                personaClient.getProfileByGuid({},"token",function(err,data) {
-                    assert(err!=null);
-                    err.should.be.a.String;
-                    err.should.equal("guid and token are required strings");
-                    assert(data===null);
-                    done();
-                });
-            });
-            it("should throw an error if token is not present", function(done){
-                personaClient.getProfileByGuid("GUID",null,function(err,data) {
-                    assert(err!=null);
-                    err.should.be.a.String;
-                    err.should.equal("guid and token are required strings");
-                    assert(data===null);
-                    done();
-                });
-            });
-            it("should throw an error if token is not a string", function(done){
-                personaClient.getProfileByGuid("GUID",{},function(err,data) {
-                    assert(err!=null);
-                    err.should.be.a.String;
-                    err.should.equal("guid and token are required strings");
-                    assert(data===null);
-                    done();
-                });
-            });
+
             it("should fail with a status code of 404 for a user not found", function(done){
                 personaClient.obtainToken({id: oauthClient, secret: oauthSecret}, function(err, data1) {
-                    personaClient.getProfileByGuid('GUID', data1.access_token, function(err, data){
+                    personaClient.getProfileByGuid({guid:'GUID', token:data1.access_token}, function(err, data){
                         assert(err!=null);
                         err.should.be.a.String;
                         err.should.equal("getProfileByGuid failed with status code 404");
@@ -132,7 +125,7 @@ describe("Persona Client Test Suite - User Profile Tests", function() {
 
                 personaClient.obtainToken({id: oauthClient, secret: oauthSecret}, function(error, token) {
                     assert(error == null);
-                    personaClient.getProfileByGuid('fdgNy6QWGmIAl7BRjEsFtA', token.access_token, function(error, data) {
+                    personaClient.getProfileByGuid({guid: 'fdgNy6QWGmIAl7BRjEsFtA', token: token.access_token}, function(error, data) {
                         assert(error == null);
                         assert(data != null);
                         data.should.be.an.Object;
