@@ -318,7 +318,7 @@ PersonaClient.prototype.validateHTTPBearerToken = function (request, response, n
     if (arguments.length > 3) {
         throw "Usage: validateHTTPBearerToken(request, response, next)";
     }
-    var token = this.getToken(request);
+    var token = this._getToken(request);
     var xRequestId = this.getXRequestId(request);
 
     this.validateToken(token, request.param("scope"), xRequestId, function (error, validationResult) {
@@ -369,8 +369,9 @@ PersonaClient.prototype.validateHTTPBearerToken = function (request, response, n
  * Extract a token from the request - try the header first, followed by the request params
  * @param req
  * @return {*}
+ * @private
  */
-PersonaClient.prototype.getToken = function (req) {
+PersonaClient.prototype._getToken = function (req) {
     if (req.header("Authorization")) {
         var result = req.header("Authorization").match(/Bearer\s(\S+)/);
         if (result && result.length > 1) {
