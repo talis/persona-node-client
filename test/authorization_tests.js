@@ -9,10 +9,11 @@ var runBeforeEach = require("./utils").beforeEach;
 var runAfterEach = require("./utils").afterEach;
 var leche = require("leche");
 var withData = leche.withData;
+var _ = require("lodash");
 
 describe("Persona Client Test Suite - Authorization Tests", function() {
 
-    var personaClient;
+    var personaClient, spy;
     var oauthClient = process.env.PERSONA_TEST_OAUTH_CLIENT || "primate";
     var oauthSecret = process.env.PERSONA_TEST_OAUTH_SECRET || "bananas";
 
@@ -51,105 +52,55 @@ describe("Persona Client Test Suite - Authorization Tests", function() {
             redis_port: 6379,
             redis_db: 0,
             enable_debug: false,
-            cert_background_refresh: false,
+            cert_background_refresh: false
         }
     }, function(personaClientConfig) {
         beforeEach(function createClientAndStubs() {
             runBeforeEach(this.currentTest.parent.title + " " + this.currentTest.title, "authorization", true);
 
-            personaClient = persona.createClient(personaClientConfig);
+            personaClient = persona.createClient("test-suite",personaClientConfig);
+            spy = sinon.spy(personaClient.http, "request");
             sinon.stub(personaClient.tokenCache, "get").yields(null, null);
         });
 
         afterEach(function restoreStubs() {
-            runAfterEach(this.currentTest.parent.title + " " + this.currentTest.title, "authorization", true);
+            runAfterEach(this.currentTest.parent.title + " " + this.currentTest.title, "authorization", true, spy);
             personaClient.tokenCache.get.restore();
+            personaClient.http.request.restore();
         });
 
         describe("Request authorization tests",function() {
-
-            it("should throw an error if guid is not present", function(done) {
-                personaClient.requestAuthorization(null,"test title","some_id","some_secret",function(err,data) {
-                    assert(err!=null);
-                    err.should.be.a.String;
-                    err.should.equal("guid, title, id and secret are required strings");
-                    assert(data===null);
-                    done();
+            _.map(["guid","title","id","secret"],function(optsKey) {
+                var goodOpts = {guid: "some_guid", title: "some_title", id: "some_id", secret: "some_secret"};
+                it("should throw an error if "+optsKey+" is not present", function(done) {
+                    var badOpts = _.clone(goodOpts);
+                    badOpts[optsKey] = null;
+                    try {
+                        personaClient.requestAuthorization(badOpts,function(err,data) {
+                            done("callback should not be invoked");
+                        });
+                    } catch (err) {
+                        err.message.should.equal(optsKey+" in opts cannot be empty");
+                        done();
+                    }
                 });
-            });
 
-            it("should throw an error if guid is not a string", function(done) {
-                personaClient.requestAuthorization({},"test title","some_id","some_secret",function(err,data) {
-                    assert(err!=null);
-                    err.should.be.a.String;
-                    err.should.equal("guid, title, id and secret are required strings");
-                    assert(data===null);
-                    done();
-                });
-            });
-
-            it("should throw an error if title is not present", function(done) {
-                personaClient.requestAuthorization("guid",null,"some_id","some_secret",function(err,data) {
-                    assert(err!=null);
-                    err.should.be.a.String;
-                    err.should.equal("guid, title, id and secret are required strings");
-                    assert(data===null);
-                    done();
-                });
-            });
-
-            it("should throw an error if title is not a string", function(done) {
-                personaClient.requestAuthorization("guid",{},"some_id","some_secret",function(err,data) {
-                    assert(err!=null);
-                    err.should.be.a.String;
-                    err.should.equal("guid, title, id and secret are required strings");
-                    assert(data===null);
-                    done();
-                });
-            });
-
-            it("should throw an error if client id is not present", function(done) {
-                personaClient.requestAuthorization("guid","test title",null,"some_secret",function(err,data) {
-                    assert(err!=null);
-                    err.should.be.a.String;
-                    err.should.equal("guid, title, id and secret are required strings");
-                    assert(data===null);
-                    done();
-                });
-            });
-
-            it("should throw an error if client id is not a string", function(done) {
-                personaClient.requestAuthorization("guid","test title",{},"some_secret",function(err,data) {
-                    assert(err!=null);
-                    err.should.be.a.String;
-                    err.should.equal("guid, title, id and secret are required strings");
-                    assert(data===null);
-                    done();
-                });
-            });
-
-            it("should throw an error if client secret is not present", function(done) {
-                personaClient.requestAuthorization("guid","test title","some_id",null,function(err,data) {
-                    assert(err!=null);
-                    err.should.be.a.String;
-                    err.should.equal("guid, title, id and secret are required strings");
-                    assert(data===null);
-                    done();
-                });
-            });
-
-            it("should throw an error if client secret is not a string", function(done) {
-                personaClient.requestAuthorization("guid","test title","some_id",{},function(err,data) {
-                    assert(err!=null);
-                    err.should.be.a.String;
-                    err.should.equal("guid, title, id and secret are required strings");
-                    assert(data===null);
-                    done();
+                it("should throw an error if "+optsKey+" is not a string", function(done) {
+                    var badOpts = _.clone(goodOpts);
+                    badOpts[optsKey] = {foo:"bar"};
+                    try {
+                        personaClient.requestAuthorization(badOpts,function(err,data) {
+                            done("callback should not be invoked");
+                        });
+                    } catch (err) {
+                        err.message.should.equal(optsKey+" failed isString validation");
+                        done();
+                    }
                 });
             });
 
             it("should return 400 if id and secret not valid", function(done) {
-                personaClient.requestAuthorization("guid","test title","some_id","some_secret",function(err,data) {
+                personaClient.requestAuthorization({guid: "guid", title: "test title", id: "some_id", secret: "some_secret"},function(err,data) {
                     assert(err!=null);
                     err.should.be.a.String;
                     err.should.equal("Request authorization failed with error: Generate token failed with status code 400");
@@ -161,7 +112,7 @@ describe("Persona Client Test Suite - Authorization Tests", function() {
             xit("should return 401 if token scope not valid", function(done) {
                 // todo: how do I get a token without su scope? bah! Also fix persona before enabling this test
                 _getOAuthToken("invalid_scope",function(err,token) {
-                    personaClient.requestAuthorization("guid_does_not_exist","test title","some_id","some_secret",function(err,data) {
+                    personaClient.requestAuthorization({guid: "guid_does_not_exist", title: "test title", id: "some_id", secret: "some_secret"},function(err,data) {
                         assert(err!=null);
                         err.should.be.a.String;
                         err.should.equal("Request authorization failed with status code 404");
@@ -172,7 +123,7 @@ describe("Persona Client Test Suite - Authorization Tests", function() {
             });
 
             it("should return 404 if user does not exist", function(done) {
-                personaClient.requestAuthorization("guid_does_not_exist", "test title", oauthClient, oauthSecret, function(err, data) {
+                personaClient.requestAuthorization({guid: "guid_does_not_exist", title: "test title", id: oauthClient, secret: oauthSecret}, function(err, data) {
                     assert(err!=null);
                     err.should.be.a.String;
                     err.should.equal("Request authorization failed with status code 404");
@@ -183,7 +134,7 @@ describe("Persona Client Test Suite - Authorization Tests", function() {
 
             xit("should return credentials", function(done) {
                 // todo: how to get a valid guid?
-                personaClient.requestAuthorization("guid_does_exist","test title","some_id","some_secret",function(err,data) {
+                personaClient.requestAuthorization({guid: "guid_does_exist", title: "test title", id: "some_id", secret: "some_secret"},function(err,data) {
                     if (err) {
                       done(err);
                     }
@@ -196,88 +147,37 @@ describe("Persona Client Test Suite - Authorization Tests", function() {
         });
 
         describe("Delete authorization tests",function(){
-            it("should throw an error if guid is not present", function(done) {
-                personaClient.deleteAuthorization(null,"some_client_id","some_id","some_secret",function(err,data) {
-                    assert(err!=null);
-                    err.should.be.a.String;
-                    err.should.equal("guid, authorization_client_id, id and secret are required strings");
-                    assert(data===null);
-                    done();
+            _.map(["guid","authorizationClientId","id","secret"],function(optsKey) {
+                var goodOpts = {guid: "some_guid", authorizationClientId: "some_client_id", id: "some_id", secret: "some_secret"};
+                it("should throw an error if "+optsKey+" is not present", function(done) {
+                    var badOpts = _.clone(goodOpts);
+                    badOpts[optsKey] = null;
+                    try {
+                        personaClient.deleteAuthorization(badOpts,function(err,data) {
+                            done("callback should not be invoked");
+                        });
+                    } catch (err) {
+                        err.message.should.equal(optsKey+" in opts cannot be empty");
+                        done();
+                    }
                 });
-            });
 
-            it("should throw an error if guid is not a string", function(done) {
-                personaClient.deleteAuthorization({},"some_client_id","some_id","some_secret",function(err,data) {
-                    assert(err!=null);
-                    err.should.be.a.String;
-                    err.should.equal("guid, authorization_client_id, id and secret are required strings");
-                    assert(data===null);
-                    done();
-                });
-            });
-
-            it("should throw an error if authorization_client_id is not present", function(done) {
-                personaClient.deleteAuthorization("guid", null,"some_id","some_secret",function(err,data) {
-                    assert(err!=null);
-                    err.should.be.a.String;
-                    err.should.equal("guid, authorization_client_id, id and secret are required strings");
-                    assert(data===null);
-                    done();
-                });
-            });
-
-            it("should throw an error if authorization_client_id is not a string", function(done) {
-                personaClient.deleteAuthorization("guid", {},"some_id","some_secret",function(err,data) {
-                    assert(err!=null);
-                    err.should.be.a.String;
-                    err.should.equal("guid, authorization_client_id, id and secret are required strings");
-                    assert(data===null);
-                    done();
-                });
-            });
-
-            it("should throw an error if client id is not present", function(done) {
-                personaClient.deleteAuthorization("guid", "authorization_client_id",null,"some_secret",function(err,data) {
-                    assert(err!=null);
-                    err.should.be.a.String;
-                    err.should.equal("guid, authorization_client_id, id and secret are required strings");
-                    assert(data===null);
-                    done();
-                });
-            });
-
-            it("should throw an error if client id is not a string", function(done) {
-                personaClient.deleteAuthorization("guid", "authorization_client_id",{},"some_secret",function(err,data) {
-                    assert(err!=null);
-                    err.should.be.a.String;
-                    err.should.equal("guid, authorization_client_id, id and secret are required strings");
-                    assert(data===null);
-                    done();
-                });
-            });
-
-            it("should throw an error if client secret is not present", function(done) {
-                personaClient.deleteAuthorization("guid", "authorization_client_id","some_id", null,function(err,data) {
-                    assert(err!=null);
-                    err.should.be.a.String;
-                    err.should.equal("guid, authorization_client_id, id and secret are required strings");
-                    assert(data===null);
-                    done();
-                });
-            });
-
-            it("should throw an error if client secret is not a string", function(done) {
-                personaClient.deleteAuthorization("guid", "authorization_client_id","some_id", null,function(err,data) {
-                    assert(err!=null);
-                    err.should.be.a.String;
-                    err.should.equal("guid, authorization_client_id, id and secret are required strings");
-                    assert(data===null);
-                    done();
+                it("should throw an error if "+optsKey+" is not a string", function(done) {
+                    var badOpts = _.clone(goodOpts);
+                    badOpts[optsKey] = {foo:"bar"};
+                    try {
+                        personaClient.deleteAuthorization(badOpts,function(err,data) {
+                            done("callback should not be invoked");
+                        });
+                    } catch (err) {
+                        err.message.should.equal(optsKey+" failed isString validation");
+                        done();
+                    }
                 });
             });
 
             it("should return 400 if id and secret not valid", function(done) {
-                personaClient.deleteAuthorization("guid", "authorization_client_id","some_id", "some_secret",function(err) {
+                personaClient.deleteAuthorization({guid: "guid", authorizationClientId: "authorization_client_id", id: "some_id", secret: "some_secret"},function(err) {
                     assert(err!=null);
                     err.should.be.a.String;
                     err.should.equal("Request authorization failed with error: Generate token failed with status code 400");
@@ -288,7 +188,7 @@ describe("Persona Client Test Suite - Authorization Tests", function() {
             xit("should return 401 if token scope not valid", function(done) {
                 // todo: how do I get a token without su scope? bah! Also fix persona first before enabling this test
                 _getOAuthToken("invalid_scope",function(err,token) {
-                    personaClient.deleteAuthorization("guid", "authorization_client_id","some_id", "some_secret",function(err) {
+                    personaClient.deleteAuthorization({guid: "guid", authorizationClientId: "authorization_client_id", id: "some_id", secret: "some_secret"},function(err) {
                         assert(err!=null);
                         err.should.be.a.String;
                         err.should.equal("Request authorization failed with status code 404");
@@ -298,7 +198,7 @@ describe("Persona Client Test Suite - Authorization Tests", function() {
             });
 
             it("should return 204 if user does not exist", function(done) {
-                personaClient.deleteAuthorization("guid_does_not_exist", "authorization_client_id", oauthClient, oauthSecret, function(err) {
+                personaClient.deleteAuthorization({guid: "guid_does_not_exist", authorizationClientId: "authorization_client_id", id: oauthClient, secret: oauthSecret}, function(err) {
                     assert(err==null);
                     done();
                 });
@@ -306,7 +206,7 @@ describe("Persona Client Test Suite - Authorization Tests", function() {
 
             it("should return 204 if user does exist", function(done) {
                 // todo: how do a get a valid guid?
-                personaClient.deleteAuthorization("guid", "authorization_client_id", oauthClient, oauthSecret, function(err) {
+                personaClient.deleteAuthorization({guid: "guid", authorizationClientId: "authorization_client_id", id: oauthClient, secret: oauthSecret}, function(err) {
                     assert(err==null);
                     done();
                 });

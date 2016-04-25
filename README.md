@@ -9,19 +9,30 @@ Install the module by adding the following line to `packages.json`:
     "persona_client": "git://github.com/talis/persona-node-client.git#1.3.0"
 ```
 
-Create a persona client as follows:
+Create a persona client as follows. the only required param is the user agent of your calling app/script:
 
 ```javascript
 var persona = require('persona_client');
-var personaClient = persona.createClient({
-    persona_host:"localhost",
-    persona_port:443,
-    persona_scheme:"https",
-    persona_oauth_route:"/oauth/tokens",
-    enable_debug: true,
-    logger: AppLogger
+var personaClient = persona.createClient('myapp/0.0.1');
+```
+
+optionally, you can pass some configuration in a second parameter:
+
+```javascript
+var persona = require('persona_client');
+var personaClient = persona.createClient('myapp/0.0.1',{
+ persona_host: "users.talis.com",
+ persona_port = 443,
+ persona_scheme = 'https';
+ persona_oauth_route = '/oauth/tokens/',
+ enable_debug : true,
+ logger: myCustomAppLoggerInstance,
+ cache: cacheConfig, // see Caching OAuth tokens below...
+ cert_background_refresh: 'true' // refresh the public cert from persona
+ cert_timeout_sec: '600' // the timeout after which the obtained cert should not be used
 });
 ```
+
 
 If using express, we recommend the following middleware:
 
@@ -54,6 +65,8 @@ If the validation fails, `401` will be returned to the client automatically.
 
 ### Pre-signing signing urls
 
+This functionality is deprecated since 3.0.0. It will be removed in 4.0.0.
+
 Signing:
 
 ```javascript
@@ -73,7 +86,7 @@ Checking:
 Requesting:
 
 ```javascript
-  personaClient.requestAuthorization('user_guid', 'Required for access to admin', 'client_id', 'client_secret', function(err,authorization) {
+  personaClient.requestAuthorization({guid: 'user_guid', title:'Required for access to admin', id:'client_id', secret:'client_secret'}, function(err,authorization) {
     // do stuff
   });
 ```
@@ -81,7 +94,7 @@ Requesting:
 Deleting:
 
 ```javascript
-  personaClient.deleteAuthorization('user_guid', 'Required for access to admin', 'client_id', 'client_secret', function(err) {
+  personaClient.deleteAuthorization({guid:'user_guid', authorizationClientId:'auth_client_id', id:'client_id', secret:'client_secret'}, function(err) {
     // do stuff
   });
 ```
@@ -91,7 +104,7 @@ Deleting:
 Via guid:
 
 ```javascript
-  personaClient.getProfileByGuid ('user_guid', 'token', function(err, user) {
+  personaClient.getProfileByGuid({guid:'user_guid', token:'token'}, function(err, user) {
     // do stuff
     var profile = user.profile;
   });
@@ -100,18 +113,19 @@ Via guid:
 ### Updating a user profile
 
 ```javascript
-  personaClient.updateProfile('user_guid', {first_name:'Max',surname:'Payne'} 'token', function(err, user) {
+  personaClient.updateProfile({guid:'user_guid', profile:{first_name:'Max',surname:'Payne'}, token:'token'}, function(err, user) {
     // do stuff
     var profile = user.profile;
   });
 ```
 
-### Caching OAuth tokens
+### Caching
 
-Persona client allows multiple strategies to cache tokens (to avoid repeated
- requests to Persona) via [cache-service](https://npmjs.org/package/cache-service)
+Persona client allows multiple strategies to cache (to avoid repeated requests to Persona) via [cache-service](https://npmjs.org/package/cache-service)
 
- This is configured through the persona client config, e.g.:
+Currently requests for the public key (to verify JWT tokens) and repeated calls to obtain token are cached.
+
+This is configured through the persona client config, e.g.:
 
  ```javascript
  {
@@ -137,6 +151,25 @@ Persona client allows multiple strategies to cache tokens (to avoid repeated
  
 `options` are passed directly to the `cache-service-{module}` constructor, so can be whatever is valid for a given
 cache-service module.
+
+## X-Request-Id
+
+See https://blog.viaduct.io/x-request-id/
+
+For request tracking purposes you can optionally pass an `X-Request-Id` to every function call just before the callback. This is useful in a support scenario as it allows Talis to identify your requests.
+
+Best practice is to use a new `X-Request-Id` for every user request passing through your system.
+
+Example:
+
+```javascript
+  var xRequestId = "SOME_RANDOMLY_GENERATED_STRING"
+  log.info("Calling persona with X-Request-Id: "+xRequestId; // use this log line later if there is a problem in any support requests
+  personaClient.getProfileByGuid ('user_guid', 'token', xRequestId, function(err, user) {
+    // do stuff
+    var profile = user.profile;
+  });
+```
 
 ## Contributing
 In lieu of a formal styleguide, take care to maintain the existing coding style. Add unit tests for any new or changed functionality. Lint and test your code using [Grunt](http://gruntjs.com/).

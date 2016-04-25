@@ -62,7 +62,7 @@ describe("Persona Client Test Suite - Presigned URL Tests", function() {
             var secret = "canyoukeepasecret";
 
             it("should throw error if no URL is provided to sign", function(done){
-                var personaClient = persona.createClient(personaClientConfig);
+                var personaClient = persona.createClient("test-suite",personaClientConfig);
 
                 var presignUrl = function(){
                     return personaClient.presignUrl(null, secret, null, function(err, result){});
@@ -74,7 +74,7 @@ describe("Persona Client Test Suite - Presigned URL Tests", function() {
             });
 
             it("should throw error if no secret is provided to sign with", function(done){
-                var personaClient = persona.createClient(personaClientConfig);
+                var personaClient = persona.createClient("test-suite",personaClientConfig);
 
                 var urlToSign = 'http://192.168.10.62:3000/player?shortcode=google&expires=1395160411633';
 
@@ -88,7 +88,7 @@ describe("Persona Client Test Suite - Presigned URL Tests", function() {
             });
 
             it("should generate presigned URL", function(done){
-                var personaClient = persona.createClient(personaClientConfig);
+                var personaClient = persona.createClient("test-suite",personaClientConfig);
 
                 var urlToSign = 'http://192.168.10.62:3000/player?shortcode=google&expires=1395160411633';
                 var expectedHash = cryptojs.HmacSHA256(urlToSign, secret);
@@ -103,7 +103,7 @@ describe("Persona Client Test Suite - Presigned URL Tests", function() {
             });
 
             it("should generate presigned URL and add default expiry", function(done){
-                var personaClient = persona.createClient(personaClientConfig);
+                var personaClient = persona.createClient("test-suite",personaClientConfig);
 
                 var urlToSign = 'http://192.168.10.62:3000/player?shortcode=google';
 
@@ -117,7 +117,7 @@ describe("Persona Client Test Suite - Presigned URL Tests", function() {
             });
 
             it("should generate presigned URL and add passed expiry", function(done){
-                var personaClient = persona.createClient(personaClientConfig);
+                var personaClient = persona.createClient("test-suite",personaClientConfig);
 
                 var urlToSign = 'http://192.168.10.62:3000/player?shortcode=google';
 
@@ -140,7 +140,7 @@ describe("Persona Client Test Suite - Presigned URL Tests", function() {
             });
 
             it("should generate presigned URL that has hash component", function(done){
-                var personaClient = persona.createClient(personaClientConfig);
+                var personaClient = persona.createClient("test-suite",personaClientConfig);
 
                 var urlToSign = 'http://192.168.10.62:3000/player?shortcode=google&expires=1395160411633#/modules/52d01975d705e4730100000a/resources/5322e5413c53585456000006';
                 var expectedHash = cryptojs.HmacSHA256(urlToSign, secret);
@@ -157,7 +157,7 @@ describe("Persona Client Test Suite - Presigned URL Tests", function() {
             });
 
             it("should generate presigned URL that has hash component and add default expiry", function(done){
-                var personaClient = persona.createClient(personaClientConfig);
+                var personaClient = persona.createClient("test-suite",personaClientConfig);
 
                 var urlHash = '#/modules/52d01975d705e4730100000a/resources/5322e5413c53585456000006';
                 var urlToSign = 'http://192.168.10.62:3000/player?shortcode=google' + urlHash;
@@ -174,7 +174,7 @@ describe("Persona Client Test Suite - Presigned URL Tests", function() {
             });
 
             it("should generate presigned URL that has hash component and add passed expiry", function(done){
-                var personaClient = persona.createClient(personaClientConfig);
+                var personaClient = persona.createClient("test-suite",personaClientConfig);
 
                 var urlHash = '#/modules/52d01975d705e4730100000a/resources/5322e5413c53585456000006';
                 var baseUrl = 'http://192.168.10.62:3000/player?shortcode=google';
@@ -198,7 +198,7 @@ describe("Persona Client Test Suite - Presigned URL Tests", function() {
             });
 
             it("should throw error if no presigned URL is provided to validate", function(done){
-                var personaClient = persona.createClient(personaClientConfig);
+                var personaClient = persona.createClient("test-suite",personaClientConfig);
 
                 var validateUrl = function(){
                     return personaClient.isPresignedUrlValid(null, secret);
@@ -210,7 +210,7 @@ describe("Persona Client Test Suite - Presigned URL Tests", function() {
             });
 
             it("should throw error if no secret is provided to validate", function(done){
-                var personaClient = persona.createClient(personaClientConfig);
+                var personaClient = persona.createClient("test-suite",personaClientConfig);
 
                 var urlToValidate = 'http://192.168.10.62:3000/player?shortcode=google&expires=1395229157990&signature=ae1ef4f1f2e8a45643e51ab34cc1d08dd627f5bb6e9569b84bcce622040a41fb#/modules/52d01975d705e4730100000a/resources/5322e5413c53585456000006';
 
@@ -224,7 +224,7 @@ describe("Persona Client Test Suite - Presigned URL Tests", function() {
             });
 
             it("should validate a presigned URL with no querystring or hash parameters", function(done){
-                var personaClient = persona.createClient(personaClientConfig);
+                var personaClient = persona.createClient("test-suite",personaClientConfig);
 
                 var baseUrl = 'http://192.168.10.62:3000/player';
                 var expiry = new Date().getTime() + 86400;
@@ -243,7 +243,7 @@ describe("Persona Client Test Suite - Presigned URL Tests", function() {
             });
 
             it("should validate a presigned URL", function(done){
-                var personaClient = persona.createClient(personaClientConfig);
+                var personaClient = persona.createClient("test-suite",personaClientConfig);
 
                 var urlHash = '#/modules/52d01975d705e4730100000a/resources/5322e5413c53585456000006';
                 var baseUrl = 'http://192.168.10.62:3000/player?shortcode=google';
@@ -264,7 +264,7 @@ describe("Persona Client Test Suite - Presigned URL Tests", function() {
             });
 
             it("should validate a presigned URL has an expiry", function(done){
-                var personaClient = persona.createClient(personaClientConfig);
+                var personaClient = persona.createClient("test-suite",personaClientConfig);
 
                 var urlHash = '#/modules/52d01975d705e4730100000a/resources/5322e5413c53585456000006';
                 var baseUrl = 'http://192.168.10.62:3000/player?shortcode=google';
@@ -281,7 +281,7 @@ describe("Persona Client Test Suite - Presigned URL Tests", function() {
             });
 
             it("should validate a presigned URL has expired", function(done){
-                var personaClient = persona.createClient(personaClientConfig);
+                var personaClient = persona.createClient("test-suite",personaClientConfig);
 
                 var urlHash = '#/modules/52d01975d705e4730100000a/resources/5322e5413c53585456000006';
                 var baseUrl = 'http://192.168.10.62:3000/player?shortcode=google';
@@ -302,7 +302,7 @@ describe("Persona Client Test Suite - Presigned URL Tests", function() {
             });
 
             it("should validate a presigned URL is invalid", function(done){
-                var personaClient = persona.createClient(personaClientConfig);
+                var personaClient = persona.createClient("test-suite",personaClientConfig);
 
                 var urlHash = '#/modules/52d01975d705e4730100000a/resources/5322e5413c53585456000006';
                 var baseUrl = 'http://192.168.10.62:3000/player?shortcode=google';

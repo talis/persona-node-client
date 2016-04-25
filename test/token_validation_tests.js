@@ -18,7 +18,7 @@ var lodash = require('lodash');
 
 describe("Persona Client Test Suite - Token Validation Tests", function() {
 
-    var personaClient;
+    var personaClient, spy;
     var privateKey = fs.readFileSync(__dirname + "/keys/privkey.pem", "utf-8");
     var publicKey = fs.readFileSync(__dirname + "/keys/pubkey.pem", "utf-8");
     withData({
@@ -28,7 +28,7 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
             persona_scheme: process.env.PERSONA_TEST_SCHEME || "http",
             persona_oauth_route: "/oauth/tokens/",
             enable_debug: false,
-            cert_background_refresh: false,
+            cert_background_refresh: false
         },
         "redis": {
             persona_host: process.env.PERSONA_TEST_HOST || "persona",
@@ -64,8 +64,8 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
         beforeEach(function(done) {
             this.nockAssertions = runBeforeEach(this.currentTest.title, "token_validation");
 
-            personaClient = persona.createClient(personaClientConfig);
-            sinon.spy(personaClient.http, "request");
+            personaClient = persona.createClient("test-suite",personaClientConfig);
+            spy = sinon.spy(personaClient.http, "request");
             // Some tests rely on the cache being in a clean state
             personaClient.tokenCache.flush(function onFlushed() {
                 done();
@@ -79,7 +79,7 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
                 });
             }
 
-            runAfterEach(this.currentTest.title, "token_validation");
+            runAfterEach(this.currentTest.title, "token_validation",spy);
             personaClient.http.request.restore();
         });
 
@@ -87,13 +87,24 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
             var config = lodash.clone(personaClientConfig);
             config.cert_background_refresh = true;
 
-            persona.PUBLIC_KEY_AUTO_REFRESH_TIMEOUT = 1;
-            var client = persona.createClient(config);
+            var client = persona.createClient("test-suite",config);
+            setTimeout(function fin() {
+                clearInterval(client.refreshTimerId);
+                return done();
+            }, 250);
+        });
+
+        it('should refresh cert once within timeout', function autoUpdateTest(done) {
+            var config = lodash.merge(lodash.clone(personaClientConfig),{cert_timeout_sec:1});
+
+            config.cert_background_refresh = true;
+
+            var client = persona.createClient("test-suite",config);
 
             setTimeout(function fin() {
                 clearInterval(client.refreshTimerId);
                 return done();
-            }, 3000);
+            }, 1500);
         });
 
         it("should not validate an invalid token", function(done) {
@@ -144,6 +155,38 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
                     assert.equal(res._setWasCalled, false);
 
                     assert.equal(result, "ok");
+                    done();
+                });
+            });
+        });
+
+        it("should send the request id on req if supplied", function(done) {
+            var payload = {
+                scopes: [
+                    "standard_user"
+                ]
+            };
+
+            var jwtSigningOptions = {
+                jwtid: guid(),
+                algorithm: "RS256",
+                expiresIn: "1h",
+                audience: "standard_user"
+            };
+
+            jwt.sign(payload, privateKey, jwtSigningOptions, function(token) {
+                var req = _getStubRequest(token, null);
+                console.log(req);
+                req.header = function(key) {
+                    return (key === "X-Request-Id") ? "specific-id" : null;
+                };
+                var res = _getStubResponse();
+
+                personaClient.validateHTTPBearerToken(req, res, function validatedToken(err, result) {
+                    if (err) {
+                        return done(err);
+                    }
+                    assert.equal(spy.getCall(0).args[0].headers['X-Request-Id'], "specific-id");
                     done();
                 });
             });

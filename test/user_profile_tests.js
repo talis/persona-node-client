@@ -6,7 +6,9 @@ var persona = require("../index");
 var runBeforeEach = require("./utils").beforeEach;
 var runAfterEach = require("./utils").afterEach;
 var leche = require("leche");
+var sinon = require("sinon");
 var withData = leche.withData;
+var _ = require("lodash");
 
 describe("Persona Client Test Suite - User Profile Tests", function() {
 
@@ -51,63 +53,51 @@ describe("Persona Client Test Suite - User Profile Tests", function() {
             cert_background_refresh: false,
         }
     }, function(personaClientConfig) {
+        var personaClient, spy;
         beforeEach(function() {
             runBeforeEach(this.currentTest.title, "user_profile");
+            personaClient = persona.createClient("test-suite",personaClientConfig);
+            spy = sinon.spy(personaClient.http, "request");
         });
 
         afterEach(function() {
-            runAfterEach(this.currentTest.title, "user_profile");
+            runAfterEach(this.currentTest.title, "user_profile",spy);
+            personaClient.http.request.restore();
         });
 
         describe("- Get user profile by guid tests", function() {
-            it("should throw an error if guid is not present", function(done) {
-                var personaClient = persona.createClient(personaClientConfig);
+            _.map(["guid","token"],function(optsKey) {
+                var goodOpts = {guid: "some_guid", profile: {}, token: "some_token"};
+                it("should throw an error if "+optsKey+" is not set", function(done) {
+                    var badOpts = _.clone(goodOpts);
+                    badOpts[optsKey] = null;
+                    try {
+                        personaClient.getProfileByGuid(badOpts,function(err,data) {
+                            done("callback should not be invoked");
+                        });
+                    } catch (err) {
+                        err.message.should.equal(optsKey+" in opts cannot be empty");
+                        done();
+                    }
+                });
 
-                personaClient.getProfileByGuid(null,"",function(err,data) {
-                    assert(err!=null);
-                    err.should.be.a.String;
-                    err.should.equal("guid and token are required strings");
-                    assert(data===null);
-                    done();
+                it("should throw an error if "+optsKey+" is not a string", function(done) {
+                    var badOpts = _.clone(goodOpts);
+                    badOpts[optsKey] = {foo:"bar"};
+                    try {
+                        personaClient.getProfileByGuid(badOpts,function(err,data) {
+                            done("callback should not be invoked");
+                        });
+                    } catch (err) {
+                        err.message.should.equal(optsKey+" failed isString validation");
+                        done();
+                    }
                 });
             });
-            it("should throw an error if guid is not a string", function(done) {
-                var personaClient = persona.createClient(personaClientConfig);
 
-                personaClient.getProfileByGuid({},"token",function(err,data) {
-                    assert(err!=null);
-                    err.should.be.a.String;
-                    err.should.equal("guid and token are required strings");
-                    assert(data===null);
-                    done();
-                });
-            });
-            it("should throw an error if token is not present", function(done){
-                var personaClient = persona.createClient(personaClientConfig);
-
-                personaClient.getProfileByGuid("GUID",null,function(err,data) {
-                    assert(err!=null);
-                    err.should.be.a.String;
-                    err.should.equal("guid and token are required strings");
-                    assert(data===null);
-                    done();
-                });
-            });
-            it("should throw an error if token is not a string", function(done){
-                var personaClient = persona.createClient(personaClientConfig);
-
-                personaClient.getProfileByGuid("GUID",{},function(err,data) {
-                    assert(err!=null);
-                    err.should.be.a.String;
-                    err.should.equal("guid and token are required strings");
-                    assert(data===null);
-                    done();
-                });
-            });
             it("should fail with a status code of 404 for a user not found", function(done){
-                var personaClient = persona.createClient(personaClientConfig);
-                personaClient.obtainToken(oauthClient, oauthSecret, function(err, data1) {
-                    personaClient.getProfileByGuid('GUID', data1.access_token, function(err, data){
+                personaClient.obtainToken({id: oauthClient, secret: oauthSecret}, function(err, data1) {
+                    personaClient.getProfileByGuid({guid:'GUID', token:data1.access_token}, function(err, data){
                         assert(err!=null);
                         err.should.be.a.String;
                         err.should.equal("getProfileByGuid failed with status code 404");
@@ -133,11 +123,9 @@ describe("Persona Client Test Suite - User Profile Tests", function() {
                     }
                 };
 
-                var personaClient = persona.createClient(personaClientConfig);
-
-                personaClient.obtainToken(oauthClient, oauthSecret, function(error, token) {
+                personaClient.obtainToken({id: oauthClient, secret: oauthSecret}, function(error, token) {
                     assert(error == null);
-                    personaClient.getProfileByGuid('fdgNy6QWGmIAl7BRjEsFtA', token.access_token, function(error, data) {
+                    personaClient.getProfileByGuid({guid: 'fdgNy6QWGmIAl7BRjEsFtA', token: token.access_token}, function(error, data) {
                         assert(error == null);
                         assert(data != null);
                         data.should.be.an.Object;
@@ -149,72 +137,41 @@ describe("Persona Client Test Suite - User Profile Tests", function() {
         });
 
         describe("- Update user profile tests", function(){
-            it("should throw an error if guid is not set", function(done){
-                var personaClient = persona.createClient(personaClientConfig);
 
-                personaClient.updateProfile(null,{}, "",function(err,data) {
-                    assert(err!=null);
-                    err.should.be.a.String;
-                    err.should.equal("guid and token are required strings");
-                    assert(data===null);
-                    done();
+            _.map(["guid","profile","token"],function(optsKey) {
+                var goodOpts = {guid: "some_guid", profile: {}, token: "some_token"};
+                it("should throw an error if "+optsKey+" is not set", function(done) {
+                    var badOpts = _.clone(goodOpts);
+                    badOpts[optsKey] = null;
+                    try {
+                        personaClient.updateProfile(badOpts,function(err,data) {
+                            done("callback should not be invoked");
+                        });
+                    } catch (err) {
+                        err.message.should.equal(optsKey+" in opts cannot be empty");
+                        done();
+                    }
+                });
+
+                var isObject = _.isObject(goodOpts[optsKey]);
+                it("should throw an error if "+optsKey+" is not a "+((isObject) ? "object" : "string"), function(done) {
+                    var badOpts = _.clone(goodOpts);
+                    badOpts[optsKey] = (isObject) ? "foo,bar" : {foo:"bar"};
+                    try {
+                        personaClient.updateProfile(badOpts,function(err,data) {
+                            done("callback should not be invoked");
+                        });
+                    } catch (err) {
+                        if (isObject) {
+                            err.message.should.equal(optsKey+" failed isObject validation");
+                        } else {
+                            err.message.should.equal(optsKey+" failed isString validation");
+                        }
+                        done();
+                    }
                 });
             });
-            it("should throw an error if guid is not a string", function(done){
-                var personaClient = persona.createClient(personaClientConfig);
 
-                personaClient.updateProfile({},{}, "",function(err,data) {
-                    assert(err!=null);
-                    err.should.be.a.String;
-                    err.should.equal("guid and token are required strings");
-                    assert(data===null);
-                    done();
-                });
-            });
-            it("should throw an error if profile is not set", function(done){
-                var personaClient = persona.createClient(personaClientConfig);
-
-                personaClient.updateProfile("GUID",null, "",function(err,data) {
-                    assert(err!=null);
-                    err.should.be.a.String;
-                    err.should.equal("profile is a required object");
-                    assert(data===null);
-                    done();
-                });
-            });
-            it("should throw an error if profile not an object", function(done){
-                var personaClient = persona.createClient(personaClientConfig);
-
-                personaClient.updateProfile("GUID","PROFILE", "",function(err,data) {
-                    assert(err!=null);
-                    err.should.be.a.String;
-                    err.should.equal("profile is a required object");
-                    assert(data===null);
-                    done();
-                });
-            });
-            it("should throw an error if token is not set", function(done){
-                var personaClient = persona.createClient(personaClientConfig);
-
-                personaClient.updateProfile("GUID",{}, null,function(err,data) {
-                    assert(err!=null);
-                    err.should.be.a.String;
-                    err.should.equal("guid and token are required strings");
-                    assert(data===null);
-                    done();
-                });
-            });
-            it("should throw an error if token it not a string", function(done){
-                var personaClient = persona.createClient(personaClientConfig);
-
-                personaClient.updateProfile("GUID",{}, {},function(err,data) {
-                    assert(err!=null);
-                    err.should.be.a.String;
-                    err.should.equal("guid and token are required strings");
-                    assert(data===null);
-                    done();
-                });
-            });
             it("should return a user if success", function(done){
                 var expected = {
                     "_id": {
@@ -232,10 +189,8 @@ describe("Persona Client Test Suite - User Profile Tests", function() {
                     }
                 };
 
-                var personaClient = persona.createClient(personaClientConfig);
-
-                personaClient.obtainToken(oauthClient, oauthSecret, function(error, token) {
-                    personaClient.updateProfile('fdgNy6QWGmIAl7BRjEsFtA', expected.profile, token.access_token, function(error, data) {
+                personaClient.obtainToken({id: oauthClient, secret: oauthSecret}, function(error, token) {
+                    personaClient.updateProfile({guid:'fdgNy6QWGmIAl7BRjEsFtA', profile:expected.profile, token:token.access_token}, function(error, data) {
                         assert(error == null);
                         assert(data != null);
                         data.should.be.an.Object;

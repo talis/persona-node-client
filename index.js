@@ -6,10 +6,12 @@ var querystring = require("querystring");
 var _ = require("lodash");
 var jwt = require("jsonwebtoken");
 var CacheService = require("cache-service");
+var fs = require("fs");
+var uuid = require('uuid');
+
+var clientVer = JSON.parse(fs.readFileSync("package.json", "utf8")).version || "unknown";
 
 var PUBLIC_KEY_CACHE_NAME = "public_key";
-var CACHE_TIMEOUT = 60 * 10;
-var PUBLIC_KEY_AUTO_REFRESH_TIMEOUT = 60 * 7;
 
 // log severities
 var DEBUG = "debug";
@@ -23,19 +25,50 @@ var ERROR_TYPES = {
 };
 
 /**
- * Constructor you must pass in a config object with the following properties set:
- *
- * mandatory params
- * config.persona_host = "localhost";
- * config.persona_port = 443;
- * config.persona_scheme = "https";
- * config.persona_oauth_route = "/oauth/tokens/";
+ * Validate method opts
+ * @param opts
+ * @param mandatoryKeys null|array|object a simple array of madatory keys, or key/value where value is a function to validate the value of key in opts
+ */
+var validateOpts = function validateOpts(opts,mandatoryKeys){
+    if (!_.isObject(opts)) {
+        throw new Error("Expecting opts to be an object");
+    }
+    if (!_.isEmpty(mandatoryKeys)) {
+        if (_.isArray(mandatoryKeys)) {
+            mandatoryKeys.forEach(function(mandatoryKey) {
+                if (_.isEmpty(opts[mandatoryKey])) {
+                    throw new Error(mandatoryKey+" in opts cannot be empty");
+                }
+            });
+        } else if (_.isObject(mandatoryKeys)) {
+            _.keysIn(mandatoryKeys).forEach(function(mandatoryKey) {
+                var validationFn = mandatoryKeys[mandatoryKey];
+                if (_.isEmpty(opts[mandatoryKey])) {
+                    throw new Error(mandatoryKey+" in opts cannot be empty");
+                } else if (!validationFn(opts[mandatoryKey])) {
+                    throw new Error(mandatoryKey+" failed "+validationFn.name+" validation");
+                }
+            });
+        } else {
+            throw new Error("mandatoryKeys must be empty, array or object");
+        }
+    }
+};
+
+/**
+ * Constructor you must pass in an appId string identifying your app, plus an optional config object with the
+ * following properties set:
  *
  * optional params:
+ * config.persona_host = string, defaults to "users.talis.com";
+ * config.persona_port = string|integer, defaults to 443;
+ * config.persona_scheme = string, defaults to "https";
+ * config.persona_oauth_route = string, defaults to "/oauth/tokens/";
  * config.enable_debug : true|false
  * config.logger: <pass in a logger that has debug() and error() functions>
  * config.cache: { module: <redis|node-cache>, options: <cache-service-options> }
  * config.cert_background_refresh: true|false defaults to true
+ * config.cert_timeout_sec: int, defaults to 600
  *
  * deprecated params:
  * config.redis_host
@@ -45,25 +78,41 @@ var ERROR_TYPES = {
  * This library stores no default configuration of its own. It relies on the application/service
  * it is embedded in to supply this information.
  *
- * @param config
+ * @param appUA an identifying user agent string for your app, compatible with user agent formatting
+ * as per https://tools.ietf.org/html/rfc7231#section-5.5.3 e.g. 'my-app', 'my-app/0.1',
+ * 'my-app/0.1 (Ubuntu/12.04; nodejs/0.10.13)`
+ * @param config object containing config
  * @constructor
  */
-var PersonaClient = function (config) {
-    this.config = config || {};
-
-    var requiredAttributes = [
-        'persona_host', 'persona_port', 'persona_scheme',
-        'persona_oauth_route'
-    ];
-
-    for (var i = 0; i < requiredAttributes.length; i++) {
-        var attribute = requiredAttributes[i];
-
-        if (this.config[attribute] === undefined) {
-            var name = attribute.replace(/_/g, ' ');
-            throw new Error("You must specify the " + name);
-        }
+var PersonaClient = function (appUA, config) {
+    if (!_.isString(appUA)) {
+        throw new Error("Expected string appId as first parameter");
     }
+
+    // establish config, including defaults
+    this.config = config || {};
+    if (!_.has(this.config,"cert_timeout_sec")) {
+        this.config.cert_timeout_sec = 600;
+    } else {
+        this.config.cert_timeout_sec = parseInt(this.config.cert_timeout_sec,10);
+        if (_.isNaN(this.config.cert_timeout_sec)) {
+            throw new Error("Cert config timeout could not be parsed as integer");
+        }
+        // now set refresh interval ms to be equal or just under cert timeout sec
+        this.pk_auto_refresh_timeout_ms =  (this.config.cert_timeout_sec>10) ? (this.config.cert_timeout_sec - 10) * 1000 : this.config.cert_timeout_sec * 1000;
+    }
+
+    this.userAgent = (process && _.has(process,["version","env.NODE_ENV"])) ? appUA+
+      " persona-node-client/"+clientVer+" (nodejs/"+process.version+"; NODE_ENV="+
+      process.env.NODE_ENV+")" : appUA + " persona-node-client/"+clientVer;
+
+    // default connection config
+    _.merge({
+        persona_host: "users.talis.com",
+        persona_port: 443,
+        persona_scheme: "https",
+        persona_oauth_route: "/oauth/tokens/"
+    },this.config);
 
     var CacheServiceModule;
     var cacheOptions = {};
@@ -95,13 +144,13 @@ var PersonaClient = function (config) {
     this.http = require(this.config.persona_scheme);
 
     if (this.config.cert_background_refresh !== false) {
-        this.getPublicKey(function retrievedCert() {
+        this._getPublicKey(function retrievedCert() {
             this.refreshTimerId = setInterval(function refreshCert() {
-                this.getPublicKey(function retrievedPublicKey() {
+                this._getPublicKey(function retrievedPublicKey() {
                     log('debug', 'retrieved public key');
                 }, true);
-            }.bind(this), PUBLIC_KEY_AUTO_REFRESH_TIMEOUT);
-        }.bind(this));
+            }.bind(this), this.pk_auto_refresh_timeout_ms);
+        }.bind(this),true);
     }
 
     this.log('debug', "Persona Client Created");
@@ -111,13 +160,14 @@ var PersonaClient = function (config) {
  * Retrieve Persona's public key that is used to sign the JWTs.
  * @param {callback} cb function(err, publicCert)
  * @param {boolean=} refresh (optional) refresh the public key
+ * @private
  */
-PersonaClient.prototype.getPublicKey = function getPublicKey(cb, refresh) {
+PersonaClient.prototype._getPublicKey = function getPublicKey(cb, refresh, xRequestId) {
     var log = this.log.bind(this);
 
     var cachePublicKey = function cachePublicKey(publicKey) {
-        log('debug', 'Caching public key for ' + CACHE_TIMEOUT + 's');
-        this.tokenCache.set(PUBLIC_KEY_CACHE_NAME, publicKey, CACHE_TIMEOUT);
+        log('debug', 'Caching public key for ' + this.config.cert_timeout_sec + 's');
+        this.tokenCache.set(PUBLIC_KEY_CACHE_NAME, publicKey, this.config.cert_timeout_sec);
     }.bind(this);
 
     var getCachedPublicKey = function getCachedPublicKey(cb) {
@@ -137,6 +187,10 @@ PersonaClient.prototype.getPublicKey = function getPublicKey(cb, refresh) {
             port: this.config.persona_port,
             path: '/oauth/keys',
             method: 'GET',
+            headers: {
+                'User-Agent': this.userAgent,
+                'X-Request-Id': xRequestId || uuid.v1()
+            }
         };
 
         log('debug', 'Fetching public key from Persona');
@@ -185,11 +239,15 @@ PersonaClient.prototype.getPublicKey = function getPublicKey(cb, refresh) {
 
 /**
  * Validate bearer token locally, via JWT verification.
- * @param {string} token -  Token to validate.
- * @param {string=} scope - Optional requested scope that if provided, is also used to validate against.
+ * @param {object} opts - Options object, must include token to validate, and optionally scope to validate against, and optional xRequestId to pass through.
  * @callback next - Called with either an error as the first param or "ok" as the result in the second param.
  */
-PersonaClient.prototype.validateToken = function (token, scope, next) {
+PersonaClient.prototype.validateToken = function (opts, next) {
+    validateOpts(opts,['token']);
+    var token = opts.token;
+    var scope = opts.scope;
+    var xRequestId = opts.xRequestId || uuid.v1();
+
     if (!next) {
         throw "No callback (next attribute) provided";
     } else if (typeof next !== "function") {
@@ -208,7 +266,11 @@ PersonaClient.prototype.validateToken = function (token, scope, next) {
             hostname: this.config.persona_host,
             port: this.config.persona_port,
             path: this.config.persona_oauth_route + token + "?scope=" + scope,
-            method: "HEAD"
+            method: "HEAD",
+            headers: {
+                'User-Agent': this.userAgent,
+                'X-Request-Id': xRequestId
+            }
         };
 
         this.http.request(options, function onSuccess(response) {
@@ -266,13 +328,13 @@ PersonaClient.prototype.validateToken = function (token, scope, next) {
         });
     }.bind(this);
 
-    this.getPublicKey(function retrievedPublicKey(err, publicKey) {
+    this._getPublicKey(function retrievedPublicKey(err, publicKey) {
         if (err) {
             return next(err, null);
         }
 
         return verifyToken(publicKey);
-    });
+    },false,xRequestId);
 };
 
 /**
@@ -285,8 +347,10 @@ PersonaClient.prototype.validateHTTPBearerToken = function (request, response, n
     if (arguments.length > 3) {
         throw "Usage: validateHTTPBearerToken(request, response, next)";
     }
-    var token = this.getToken(request);
-    this.validateToken(token, request.param("scope"), function (error, validationResult) {
+    var token = this._getToken(request);
+    var xRequestId = this.getXRequestId(request);
+
+    this.validateToken({token: token, scope: request.param("scope"), xRequestId: xRequestId}, function (error, validationResult) {
         if (!error) {
             next(null, validationResult);
             return;
@@ -334,8 +398,9 @@ PersonaClient.prototype.validateHTTPBearerToken = function (request, response, n
  * Extract a token from the request - try the header first, followed by the request params
  * @param req
  * @return {*}
+ * @private
  */
-PersonaClient.prototype.getToken = function (req) {
+PersonaClient.prototype._getToken = function (req) {
     if (req.header("Authorization")) {
         var result = req.header("Authorization").match(/Bearer\s(\S+)/);
         if (result && result.length > 1) {
@@ -354,6 +419,7 @@ PersonaClient.prototype.getToken = function (req) {
  * @param secret
  * @param expires
  * @param callback
+ * @deprecated since version 3.0.0
  */
 PersonaClient.prototype.presignUrl = function (urlToSign, secret, expires, callback) {
     if (!urlToSign) {
@@ -395,6 +461,7 @@ PersonaClient.prototype.presignUrl = function (urlToSign, secret, expires, callb
  * @param presignedUrl
  * @param secret
  * @param callback
+ * @deprecated since version 3.0.0
  */
 PersonaClient.prototype.isPresignedUrlValid = function (presignedUrl, secret) {
     if (!presignedUrl) {
@@ -448,20 +515,17 @@ PersonaClient.prototype.isPresignedUrlValid = function (presignedUrl, secret) {
 
 /**
  * Obtain a new token for the given id and secret
- * @param id
- * @param secret
+ * @param opts array, id and secret are mandatory, xRequestId is optional
  * @param callback
  */
-PersonaClient.prototype.obtainToken = function (id, secret, callback) {
-    if (!id) {
-        throw new Error("You must provide an ID to obtain a token");
-    }
-    if (!secret) {
-        throw new Error("You must provide a secret to obtain a token");
-    }
+PersonaClient.prototype.obtainToken = function (opts, callback) {
+    validateOpts(opts,["id","secret"]);
+    var id = opts.id;
+    var secret = opts.secret;
+    var xRequestId = opts.xRequestId || uuid.v1();
 
-    var _this = this,
-        cacheKey = "obtain_token:" + cryptojs.HmacSHA256(id, secret);
+    var _this = this;
+    var cacheKey = "obtain_token:" + cryptojs.HmacSHA256(id, secret);
 
     // try cache first
     this.tokenCache.get(cacheKey, function (err, reply) {
@@ -483,7 +547,9 @@ PersonaClient.prototype.obtainToken = function (id, secret, callback) {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/x-www-form-urlencoded',
-                            'Content-Length': post_data.length
+                            'Content-Length': post_data.length,
+                            'User-Agent': _this.userAgent,
+                            'X-Request-Id': xRequestId
                         }
                     };
                 var req = _this.http.request(options, function (resp) {
@@ -558,7 +624,7 @@ PersonaClient.prototype.obtainToken = function (id, secret, callback) {
                         callback(err, null);
                     } else {
                         // iterate
-                        _this.obtainToken(id, secret, callback);
+                        _this.obtainToken({id: id, secret: secret, xRequestId: xRequestId}, callback);
                     }
                 });
             }
@@ -570,26 +636,19 @@ PersonaClient.prototype.obtainToken = function (id, secret, callback) {
 /**
  * Request an application authorization (client_id/secret pair) for a user with guid, authing with id and secret.
  * Use title to describe the purpose.
- * @param guid
- * @param title
- * @param id
- * @param secret
+ * @param opts array, mandatory params are guid, title, id, secret; optional params xRequestId
  * @param callback
  */
-PersonaClient.prototype.requestAuthorization = function (guid, title, id, secret, callback) {
-    try {
-        _.map([guid, title, id, secret], function (arg) {
-            if (!_.isString(arg)) {
-                throw "guid, title, id and secret are required strings";
-            }
-        });
-    } catch (e) {
-        callback(e,null);
-        return;
-    }
+PersonaClient.prototype.requestAuthorization = function (opts, callback) {
+    validateOpts(opts,{"guid": _.isString,"title": _.isString,"id": _.isString,"secret": _.isString});
+    var guid = opts.guid;
+    var title = opts.title;
+    var id = opts.id;
+    var secret = opts.secret;
+    var xRequestId = opts.xRequestId || uuid.v1();
 
     var _this = this;
-    _this.obtainToken (id,secret,function (err,token) { // todo: push down into person itself. You should be able to request an authorization using basic auth with client id/secret
+    _this.obtainToken ({id: id,secret: secret, xRequestId: xRequestId},function (err,token) { // todo: push down into person itself. You should be able to request an authorization using basic auth with client id/secret
         if (err) {
             callback("Request authorization failed with error: "+err,null);
         } else {
@@ -604,7 +663,9 @@ PersonaClient.prototype.requestAuthorization = function (guid, title, id, secret
                     headers: {
                         'Authorization': 'Bearer ' + token.access_token,
                         'Content-Type': 'application/json',
-                        'Content-Length': post_data.length
+                        'Content-Length': post_data.length,
+                        'User-Agent': _this.userAgent,
+                        'X-Request-Id': xRequestId
                     }
                 },
                 req = _this.http.request(options, function (resp) {
@@ -647,38 +708,34 @@ PersonaClient.prototype.requestAuthorization = function (guid, title, id, secret
 };
 
 /**
- * Delete the authorization defined by authorization_client_id, using id and secret to auth
- * @param authorization_client_id
- * @param id
- * @param secret
+ * Delete the authorization defined by opts.authorizationClientId, using id and secret to auth
+ * @param opts array, mandatory keys are authorizationClientId, id and secret; optional xRequestId
  * @param callback
  */
-PersonaClient.prototype.deleteAuthorization = function (guid, authorization_client_id, id, secret, callback) {
-    try {
-        _.map([guid, authorization_client_id, id, secret], function (arg) {
-            if (!_.isString(arg)) {
-                throw "guid, authorization_client_id, id and secret are required strings";
-            }
-        });
-    } catch (e) {
-        callback(e,null);
-        return;
-    }
+PersonaClient.prototype.deleteAuthorization = function (opts, callback) {
+    validateOpts(opts,{guid: _.isString,authorizationClientId: _.isString,id: _.isString,secret: _.isString});
+    var guid = opts.guid;
+    var authorizationClientId = opts.authorizationClientId;
+    var id = opts.id;
+    var secret = opts.secret;
+    var xRequestId = opts.xRequestId || uuid.v1();
 
     var _this = this;
-    _this.obtainToken(id,secret,function (err,token) { // todo: push down into person itself. You should be able to request an authorization using basic auth with client id/secret
+    _this.obtainToken({id: id,secret: secret, xRequestId: xRequestId},function (err,token) { // todo: push down into person itself. You should be able to request an authorization using basic auth with client id/secret
         if (err) {
             callback("Request authorization failed with error: "+err);
         } else {
             var options = {
                     hostname: _this.config.persona_host,
                     port: _this.config.persona_port,
-                    path: '/oauth/users/' + guid + '/authorizations/' + authorization_client_id,
+                    path: '/oauth/users/' + guid + '/authorizations/' + authorizationClientId,
                     method: 'DELETE',
                     headers: {
                         'Authorization': 'Bearer ' + token.access_token,
                         'Content-Type': 'application/json',
-                        'Content-Length': 0
+                        'Content-Length': 0,
+                        'User-Agent': _this.userAgent,
+                        'X-Request-Id': xRequestId
                     }
                 },
                 req = _this.http.request(options, function (resp) {
@@ -702,27 +759,16 @@ PersonaClient.prototype.deleteAuthorization = function (guid, authorization_clie
 
 /**
  * Update a users profile
- * @param {string} guid
- * @param {object} profile Profile data - must be an object containing profile params
- * @param {string} token
+ * @param {object} opts object, madatory: profile, token, guid; optional: xRequestId
+ * @param {function} callback
  * @callback callback
  */
-PersonaClient.prototype.updateProfile = function(guid, profile, token, callback) {
-
-    try {
-        [guid, token].forEach(function checkParamIsString(param) {
-            if (!_.isString(param)) {
-                throw "guid and token are required strings";
-            }
-        });
-        if (!_.isObject(profile)) {
-            throw "profile is a required object";
-        }
-
-    } catch (e) {
-        callback(e,null);
-        return;
-    }
+PersonaClient.prototype.updateProfile = function(opts, callback) {
+    validateOpts(opts,{guid: _.isString, token: _.isString, profile: _.isObject});
+    var guid = opts.guid;
+    var profile = opts.profile;
+    var token = opts.token;
+    var xRequestId = opts.xRequestId || uuid.v1();
 
     var _this = this;
     // Get a profile
@@ -733,7 +779,9 @@ PersonaClient.prototype.updateProfile = function(guid, profile, token, callback)
             path: '/users/' + guid + '/profile',
             method: 'PUT',
             headers: {
-                'Authorization': 'Bearer ' + token
+                'Authorization': 'Bearer ' + token,
+                'User-Agent': _this.userAgent,
+                'X-Request-Id': xRequestId
             },
             data:{
                 profile: JSON.stringify(profile)
@@ -783,22 +831,15 @@ PersonaClient.prototype.updateProfile = function(guid, profile, token, callback)
 
 /**
  * Get a user profile by a GUID
- * @param {string} guid
- * @param {string} token
+ * @param {object} opts - mandatory guid and token; optional xRequestId
+ * @param {function} callback
  * @callback callback
  */
-PersonaClient.prototype.getProfileByGuid = function(guid, token, callback){
-
-    try {
-        _.map([guid, token], function (arg) {
-            if (!_.isString(arg)) {
-                throw "guid and token are required strings";
-            }
-        });
-    } catch (e) {
-        callback(e,null);
-        return;
-    }
+PersonaClient.prototype.getProfileByGuid = function(opts, callback){
+    validateOpts(opts,{guid: _.isString,token: _.isString});
+    var guid = opts.guid;
+    var token = opts.token;
+    var xRequestId = opts.xRequestId || uuid.v1();
 
     var _this = this;
     // Get a profile
@@ -808,7 +849,9 @@ PersonaClient.prototype.getProfileByGuid = function(guid, token, callback){
         path: "/users/" + (_.isArray(guid) ? guid.join(",") : guid),
         method: "GET",
         headers: {
-            "Authorization": "Bearer " + token
+            "Authorization": "Bearer " + token,
+            'User-Agent': _this.userAgent,
+            'X-Request-Id': xRequestId
         }
     },
     req = _this.http.request(options, function (resp) {
@@ -867,21 +910,15 @@ PersonaClient.prototype._removeTokenFromCache = function (id, secret, callback) 
 
 /**
  * Get scope information for a user
- * @param guid
- * @param token
+ * @param {object} opts mandatory: guid, token; optional: xRequestId
+ * @param {function} callback
  * @param callback
  */
-PersonaClient.prototype.getScopesForUser = function(guid, token, callback) {
-    try {
-        _.map([guid, token], function (arg) {
-            if (!_.isString(arg)) {
-                throw "guid and token are required strings";
-            }
-        });
-    } catch (e) {
-        callback(e,null);
-        return;
-    }
+PersonaClient.prototype.getScopesForUser = function(opts, callback) {
+    validateOpts(opts,{guid: _.isString,token: _.isString});
+    var guid = opts.guid;
+    var token = opts.token;
+    var xRequestId = opts.xRequestId || uuid.v1();
 
     var _this = this;
 
@@ -891,7 +928,9 @@ PersonaClient.prototype.getScopesForUser = function(guid, token, callback) {
             path: "/1/clients/" + guid,
             method: 'GET',
             headers: {
-                Authorization: "Bearer " + token
+                Authorization: "Bearer " + token,
+                'User-Agent': _this.userAgent,
+                'X-Request-Id': xRequestId
             }
         },
         req = _this.http.request(options, function (resp) {
@@ -940,9 +979,15 @@ PersonaClient.prototype.getScopesForUser = function(guid, token, callback) {
  * @param guid
  * @param token
  * @param scopeChange
+ * @param xRequestId
  * @param callback
  */
-PersonaClient.prototype._setScopesForUser = function(guid, token, scopeChange, callback) {
+PersonaClient.prototype._applyScopeChange = function(guid, token, scopeChange, xRequestId, callback) {
+    if (_.isFunction(xRequestId)) {
+        callback = xRequestId; // third param is actually next(), for backwards compat.
+        xRequestId = uuid.v1();
+    }
+
     try {
         _.map([guid, token], function (arg) {
             if (!_.isString(arg)) {
@@ -968,7 +1013,9 @@ PersonaClient.prototype._setScopesForUser = function(guid, token, scopeChange, c
             json: true,
             headers: {
                 Authorization: "Bearer " + token,
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'User-Agent': _this.userAgent,
+                'X-Request-Id': xRequestId
             }
         },
         req = _this.http.request(options, function (resp) {
@@ -1003,52 +1050,42 @@ PersonaClient.prototype._setScopesForUser = function(guid, token, scopeChange, c
 
 /**
  * Add a specific scope to a user
- * @param guid
- * @param token
- * @param scope
+ * @param {object} opts mandatory: guid, token, scope; optional: xRequestId
+ * @param {function} callback
  * @param callback
  */
-PersonaClient.prototype.addScopeToUser = function(guid, token, scope, callback) {
-    try {
-        _.map([guid, token, scope], function (arg) {
-            if (!_.isString(arg)) {
-                throw "guid, token and scope are required strings";
-            }
-        });
-    } catch (e) {
-        callback(e, null);
-        return;
-    }
+PersonaClient.prototype.addScopeToUser = function(opts, callback) {
+    validateOpts(opts,{guid: _.isString,token: _.isString,scope: _.isString});
+
+    var guid = opts.guid;
+    var token = opts.token;
+    var scope = opts.scope;
+    var xRequestId = opts.xRequestId || uuid.v1();
 
     var _this = this;
     var scopeChange = {$add:scope};
 
-    _this._setScopesForUser(guid, token, scopeChange, callback);
+    _this._applyScopeChange(guid, token, scopeChange, xRequestId, callback);
 };
 
 /**
  * Remove a specific scope from a user
- * @param guid
- * @param token
- * @param scope
+ * @param {object} opts mandatory: guid, token, scope; optional: xRequestId
+ * @param {function} callback
  * @param callback
  */
-PersonaClient.prototype.removeScopeFromUser = function(guid, token, scope, callback) {
-    try {
-        _.map([guid, token, scope], function (arg) {
-            if (!_.isString(arg)) {
-                throw "guid, token and scope are required strings";
-            }
-        });
-    } catch (e) {
-        callback(e, null);
-        return;
-    }
+PersonaClient.prototype.removeScopeFromUser = function(opts, callback) {
+    validateOpts(opts,{guid: _.isString,token: _.isString,scope: _.isString});
+
+    var guid = opts.guid;
+    var token = opts.token;
+    var scope = opts.scope;
+    var xRequestId = opts.xRequestId || uuid.v1();
 
     var _this = this;
     var scopeChange = {$remove:scope};
 
-    _this._setScopesForUser(guid, token, scopeChange, callback);
+    _this._applyScopeChange(guid, token, scopeChange, xRequestId, callback);
 };
 
 /**
@@ -1082,15 +1119,28 @@ PersonaClient.prototype.error = function (message) {
     this.log(ERROR, message);
 };
 
+/**
+ * @param req Request||null
+ * @returns {*}
+ */
+PersonaClient.prototype.getXRequestId = function(req) {
+    if (_.has(req,"header") && _.isFunction(req.header) && _.isString(req.header('X-Request-Id'))) {
+        return req.header('X-Request-Id');
+    } else {
+        return uuid.v1();
+    }
+};
+
 exports.errorTypes = ERROR_TYPES;
 
 /**
  * The only way to get an instance of the Persona Client is through
  * this method
+ * @param appUA
  * @param config
  * @returns {PersonaClient}
  */
-exports.createClient = function (config) {
-    return new PersonaClient(config);
+exports.createClient = function (appUA,config) {
+    return new PersonaClient(appUA,config);
 };
 
