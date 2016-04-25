@@ -24,6 +24,19 @@ var ERROR_TYPES = {
     INSUFFICIENT_SCOPE : "insufficient_scope"
 };
 
+var validateOpts = function validateOpts(opts,mandatoryKeys){
+    if (!_.isObject(opts)) {
+        throw new Error("Expecting opts to be an object");
+    }
+    if (!_.isEmpty(mandatoryKeys)) {
+        mandatoryKeys.forEach(function(mandatoryKey) {
+            if (_.isEmpty(opts[mandatoryKey])) {
+                throw new Error(mandatoryKey+" in opts cannot be empty");
+            }
+        });
+    }
+};
+
 /**
  * Constructor you must pass in an appId string identifying your app, plus an optional config object with the
  * following properties set:
@@ -208,12 +221,15 @@ PersonaClient.prototype._getPublicKey = function getPublicKey(cb, refresh, xRequ
 
 /**
  * Validate bearer token locally, via JWT verification.
- * @param {string} token -  Token to validate.
- * @param {string=} scope - Optional requested scope that if provided, is also used to validate against.
- * @param {string=} xRequestId - Optional request ID to pass through.
+ * @param {object} opts - Options object, must include token to validate, and optionally scope to validate against, and optional xRequestId to pass through.
  * @callback next - Called with either an error as the first param or "ok" as the result in the second param.
  */
-PersonaClient.prototype.validateToken = function (token, scope, xRequestId, next) {
+PersonaClient.prototype.validateToken = function (opts, next) {
+    validateOpts(opts,['token']);
+    var token = opts.token;
+    var scope = opts.scope;
+    var xRequestId = opts.xRequestId;
+
     if (_.isFunction(xRequestId)) {
         next = xRequestId; // third param is actually next(), for backwards compat.
         xRequestId = uuid.v1();
@@ -321,7 +337,7 @@ PersonaClient.prototype.validateHTTPBearerToken = function (request, response, n
     var token = this._getToken(request);
     var xRequestId = this.getXRequestId(request);
 
-    this.validateToken(token, request.param("scope"), xRequestId, function (error, validationResult) {
+    this.validateToken({token: token, scope: request.param("scope"), xRequestId: xRequestId}, function (error, validationResult) {
         if (!error) {
             next(null, validationResult);
             return;
