@@ -190,7 +190,7 @@ PersonaClient.prototype._getPublicKey = function getPublicKey(cb, refresh, xRequ
             method: 'GET',
             headers: {
                 'User-Agent': this.userAgent,
-                'X-Request-Id': xRequestId || uuid.v1()
+                'X-Request-Id': xRequestId || uuid.v4()
             }
         };
 
@@ -247,7 +247,7 @@ PersonaClient.prototype.validateToken = function (opts, next) {
     validateOpts(opts,['token']);
     var token = opts.token;
     var scope = opts.scope;
-    var xRequestId = opts.xRequestId || uuid.v1();
+    var xRequestId = opts.xRequestId || uuid.v4();
 
     if (!next) {
         throw "No callback (next attribute) provided";
@@ -523,7 +523,7 @@ PersonaClient.prototype.obtainToken = function (opts, callback) {
     validateOpts(opts,["id","secret"]);
     var id = opts.id;
     var secret = opts.secret;
-    var xRequestId = opts.xRequestId || uuid.v1();
+    var xRequestId = opts.xRequestId || uuid.v4();
 
     var _this = this;
     var cacheKey = "obtain_token:" + cryptojs.HmacSHA256(id, secret);
@@ -646,7 +646,7 @@ PersonaClient.prototype.requestAuthorization = function (opts, callback) {
     var title = opts.title;
     var id = opts.id;
     var secret = opts.secret;
-    var xRequestId = opts.xRequestId || uuid.v1();
+    var xRequestId = opts.xRequestId || uuid.v4();
 
     var _this = this;
     _this.obtainToken ({id: id,secret: secret, xRequestId: xRequestId},function (err,token) { // todo: push down into person itself. You should be able to request an authorization using basic auth with client id/secret
@@ -719,7 +719,7 @@ PersonaClient.prototype.deleteAuthorization = function (opts, callback) {
     var authorizationClientId = opts.authorizationClientId;
     var id = opts.id;
     var secret = opts.secret;
-    var xRequestId = opts.xRequestId || uuid.v1();
+    var xRequestId = opts.xRequestId || uuid.v4();
 
     var _this = this;
     _this.obtainToken({id: id,secret: secret, xRequestId: xRequestId},function (err,token) { // todo: push down into person itself. You should be able to request an authorization using basic auth with client id/secret
@@ -769,7 +769,7 @@ PersonaClient.prototype.updateProfile = function(opts, callback) {
     var guid = opts.guid;
     var profile = opts.profile;
     var token = opts.token;
-    var xRequestId = opts.xRequestId || uuid.v1();
+    var xRequestId = opts.xRequestId || uuid.v4();
 
     var _this = this;
     // Get a profile
@@ -840,7 +840,7 @@ PersonaClient.prototype.getProfileByGuid = function(opts, callback){
     validateOpts(opts,{guid: _.isString,token: _.isString});
     var guid = opts.guid;
     var token = opts.token;
-    var xRequestId = opts.xRequestId || uuid.v1();
+    var xRequestId = opts.xRequestId || uuid.v4();
 
     var _this = this;
     // Get a profile
@@ -919,7 +919,7 @@ PersonaClient.prototype.getScopesForUser = function(opts, callback) {
     validateOpts(opts,{guid: _.isString,token: _.isString});
     var guid = opts.guid;
     var token = opts.token;
-    var xRequestId = opts.xRequestId || uuid.v1();
+    var xRequestId = opts.xRequestId || uuid.v4();
 
     var _this = this;
 
@@ -986,7 +986,7 @@ PersonaClient.prototype.getScopesForUser = function(opts, callback) {
 PersonaClient.prototype._applyScopeChange = function(guid, token, scopeChange, xRequestId, callback) {
     if (_.isFunction(xRequestId)) {
         callback = xRequestId; // third param is actually next(), for backwards compat.
-        xRequestId = uuid.v1();
+        xRequestId = uuid.v4();
     }
 
     try {
@@ -1061,7 +1061,7 @@ PersonaClient.prototype.addScopeToUser = function(opts, callback) {
     var guid = opts.guid;
     var token = opts.token;
     var scope = opts.scope;
-    var xRequestId = opts.xRequestId || uuid.v1();
+    var xRequestId = opts.xRequestId || uuid.v4();
 
     var _this = this;
     var scopeChange = {$add:scope};
@@ -1081,7 +1081,7 @@ PersonaClient.prototype.removeScopeFromUser = function(opts, callback) {
     var guid = opts.guid;
     var token = opts.token;
     var scope = opts.scope;
-    var xRequestId = opts.xRequestId || uuid.v1();
+    var xRequestId = opts.xRequestId || uuid.v4();
 
     var _this = this;
     var scopeChange = {$remove:scope};
@@ -1128,7 +1128,7 @@ PersonaClient.prototype.getXRequestId = function(req) {
     if (_.has(req,"header") && _.isFunction(req.header) && _.isString(req.header('X-Request-Id'))) {
         return req.header('X-Request-Id');
     } else {
-        return uuid.v1();
+        return uuid.v4();
     }
 };
 
