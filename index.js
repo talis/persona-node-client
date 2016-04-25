@@ -98,9 +98,10 @@ var PersonaClient = function (appUA, config) {
         if (_.isNaN(this.config.cert_timeout_sec)) {
             throw new Error("Cert config timeout could not be parsed as integer");
         }
-        // now set refresh interval ms to be equal or just under cert timeout sec
-        this.pk_auto_refresh_timeout_ms =  (this.config.cert_timeout_sec>10) ? (this.config.cert_timeout_sec - 10) * 1000 : this.config.cert_timeout_sec * 1000;
     }
+
+    // now set refresh interval ms to be equal or just under cert timeout sec
+    this.pk_auto_refresh_timeout_ms =  (this.config.cert_timeout_sec>10) ? (this.config.cert_timeout_sec - 10) * 1000 : this.config.cert_timeout_sec * 1000;
 
     this.userAgent = (process && _.has(process,["version","env.NODE_ENV"])) ? appUA+
       " persona-node-client/"+clientVer+" (nodejs/"+process.version+"; NODE_ENV="+
