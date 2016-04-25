@@ -708,28 +708,17 @@ PersonaClient.prototype.requestAuthorization = function (opts, callback) {
 };
 
 /**
- * Delete the authorization defined by authorization_client_id, using id and secret to auth
- * @param authorization_client_id
- * @param id
- * @param secret
+ * Delete the authorization defined by opts.authorizationClientId, using id and secret to auth
+ * @param opts array, mandatory keys are authorizationClientId, id and secret; optional xRequestId
  * @param callback
  */
-PersonaClient.prototype.deleteAuthorization = function (guid, authorization_client_id, id, secret, xRequestId, callback) {
-    if (_.isFunction(xRequestId)) {
-        callback = xRequestId; // third param is actually next(), for backwards compat.
-        xRequestId = uuid.v1();
-    }
-
-    try {
-        _.map([guid, authorization_client_id, id, secret], function (arg) {
-            if (!_.isString(arg)) {
-                throw "guid, authorization_client_id, id and secret are required strings";
-            }
-        });
-    } catch (e) {
-        callback(e,null);
-        return;
-    }
+PersonaClient.prototype.deleteAuthorization = function (opts, callback) {
+    validateOpts(opts,{guid: _.isString,authorizationClientId: _.isString,id: _.isString,secret: _.isString});
+    var guid = opts.guid;
+    var authorizationClientId = opts.authorizationClientId;
+    var id = opts.id;
+    var secret = opts.secret;
+    var xRequestId = opts.xRequestId || uuid.v1();
 
     var _this = this;
     _this.obtainToken({id: id,secret: secret, xRequestId: xRequestId},function (err,token) { // todo: push down into person itself. You should be able to request an authorization using basic auth with client id/secret
@@ -739,7 +728,7 @@ PersonaClient.prototype.deleteAuthorization = function (guid, authorization_clie
             var options = {
                     hostname: _this.config.persona_host,
                     port: _this.config.persona_port,
-                    path: '/oauth/users/' + guid + '/authorizations/' + authorization_client_id,
+                    path: '/oauth/users/' + guid + '/authorizations/' + authorizationClientId,
                     method: 'DELETE',
                     headers: {
                         'Authorization': 'Bearer ' + token.access_token,
