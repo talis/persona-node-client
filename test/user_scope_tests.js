@@ -140,75 +140,32 @@ describe("Persona Client Test Suite - User Scope Tests", function() {
         });
 
         describe("- Add scope to user tests", function(){
-            it("should throw an error if guid is not present", function(done) {
-                var personaClient = persona.createClient("test-suite",personaClientConfig);
-
-                personaClient.addScopeToUser(null,"token","scope",function(err,data) {
-                    assert(err != null);
-                    err.should.be.a.String;
-                    err.should.equal("guid, token and scope are required strings");
-                    assert(data == null);
-                    done();
+            _.map(["guid","token","scope"],function(optsKey) {
+                var goodOpts = {guid: "some_guid", token: "some_token", scope: "someScope"};
+                it("should throw an error if "+optsKey+" is not present", function(done) {
+                    var badOpts = _.clone(goodOpts);
+                    badOpts[optsKey] = null;
+                    try {
+                        personaClient.addScopeToUser(badOpts,function(err,data) {
+                            done("callback should not be invoked");
+                        });
+                    } catch (err) {
+                        err.message.should.equal(optsKey+" in opts cannot be empty");
+                        done();
+                    }
                 });
-            });
 
-            it("should throw an error if guid is not a string", function(done) {
-                var personaClient = persona.createClient("test-suite",personaClientConfig);
-
-                personaClient.addScopeToUser({},"token","scope",function(err,data) {
-                    assert(err != null);
-                    err.should.be.a.String;
-                    err.should.equal("guid, token and scope are required strings");
-                    assert(data == null);
-                    done();
-                });
-            });
-
-            it("should throw an error if token is not present", function(done) {
-                var personaClient = persona.createClient("test-suite",personaClientConfig);
-
-                personaClient.addScopeToUser("guid",null,"scope",function(err,data) {
-                    assert(err != null);
-                    err.should.be.a.String;
-                    err.should.equal("guid, token and scope are required strings");
-                    assert(data == null);
-                    done();
-                });
-            });
-
-            it("should throw an error if token is not a string", function(done) {
-                var personaClient = persona.createClient("test-suite",personaClientConfig);
-
-                personaClient.addScopeToUser("guid",{},"scope",function(err,data) {
-                    assert(err != null);
-                    err.should.be.a.String;
-                    err.should.equal("guid, token and scope are required strings");
-                    assert(data == null);
-                    done();
-                });
-            });
-
-            it("should throw an error if scope is not present", function(done) {
-                var personaClient = persona.createClient("test-suite",personaClientConfig);
-
-                personaClient.addScopeToUser("guid","token",null,function(err,data) {
-                    assert(err != null);
-                    err.should.be.a.String;
-                    err.should.equal("guid, token and scope are required strings");
-                    assert(data == null);
-                    done();
-                });
-            });
-
-            it("should throw an error if scope is not a string", function(done) {
-                var personaClient = persona.createClient("test-suite",personaClientConfig);
-
-                personaClient.addScopeToUser("guid","token",{},function(err,data) {
-                    assert(err != null);
-                    err.should.be.a.String;
-                    err.should.equal("guid, token and scope are required strings");
-                    assert(data == null);
-                    done();
+                it("should throw an error if "+optsKey+" is not a string", function(done) {
+                    var badOpts = _.clone(goodOpts);
+                    badOpts[optsKey] = {foo:"bar"};
+                    try {
+                        personaClient.addScopeToUser(badOpts,function(err,data) {
+                            done("callback should not be invoked");
+                        });
+                    } catch (err) {
+                        err.message.should.equal(optsKey+" failed isString validation");
+                        done();
+                    }
                 });
             });
 
@@ -216,7 +173,7 @@ describe("Persona Client Test Suite - User Scope Tests", function() {
                 var personaClient = persona.createClient("test-suite",personaClientConfig);
 
                 personaClient.obtainToken({id: oauthClient, secret: oauthSecret}, function(err, data1) {
-                    personaClient.addScopeToUser('fdgNy6QWGmIAl7BRjEsFtk', data1.access_token, "test_scope", function(err, data){
+                    personaClient.addScopeToUser({guid:'fdgNy6QWGmIAl7BRjEsFtk', token:data1.access_token, scope:"test_scope"}, function(err, data){
                         assert(err == null);
                         assert(data == null);
                         done();
@@ -227,7 +184,7 @@ describe("Persona Client Test Suite - User Scope Tests", function() {
             it("should return error if add scope fails with invalid token", function(done) {
                 var personaClient = persona.createClient("test-suite",personaClientConfig);
 
-                personaClient.addScopeToUser("fdgNy6QWGmIAl7BRjEsFtk", "invalid", "test_scope", function(err, data){
+                personaClient.addScopeToUser({guid:"fdgNy6QWGmIAl7BRjEsFtk", token:"invalid", scope:"test_scope"}, function(err, data){
                     assert(err != null);
                     err.should.be.a.String;
                     err.should.equal("setScopesForUser failed with status code 401");
@@ -238,75 +195,32 @@ describe("Persona Client Test Suite - User Scope Tests", function() {
         });
 
         describe("- Remove scope from user tests", function(){
-            it("should throw an error if guid is not present", function(done) {
-                var personaClient = persona.createClient("test-suite",personaClientConfig);
-
-                personaClient.removeScopeFromUser(null,"token","scope",function(err,data) {
-                    assert(err != null);
-                    err.should.be.a.String;
-                    err.should.equal("guid, token and scope are required strings");
-                    assert(data == null);
-                    done();
+            _.map(["guid","token","scope"],function(optsKey) {
+                var goodOpts = {guid: "some_guid", token: "some_token", scope: "someScope"};
+                it("should throw an error if "+optsKey+" is not present", function(done) {
+                    var badOpts = _.clone(goodOpts);
+                    badOpts[optsKey] = null;
+                    try {
+                        personaClient.removeScopeFromUser(badOpts,function(err,data) {
+                            done("callback should not be invoked");
+                        });
+                    } catch (err) {
+                        err.message.should.equal(optsKey+" in opts cannot be empty");
+                        done();
+                    }
                 });
-            });
 
-            it("should throw an error if guid is not a string", function(done) {
-                var personaClient = persona.createClient("test-suite",personaClientConfig);
-
-                personaClient.removeScopeFromUser({},"token","scope",function(err,data) {
-                    assert(err != null);
-                    err.should.be.a.String;
-                    err.should.equal("guid, token and scope are required strings");
-                    assert(data == null);
-                    done();
-                });
-            });
-
-            it("should throw an error if token is not present", function(done) {
-                var personaClient = persona.createClient("test-suite",personaClientConfig);
-
-                personaClient.removeScopeFromUser("guid",null,"scope",function(err,data) {
-                    assert(err != null);
-                    err.should.be.a.String;
-                    err.should.equal("guid, token and scope are required strings");
-                    assert(data == null);
-                    done();
-                });
-            });
-
-            it("should throw an error if token is not a string", function(done) {
-                var personaClient = persona.createClient("test-suite",personaClientConfig);
-
-                personaClient.removeScopeFromUser("guid",{},"scope",function(err,data) {
-                    assert(err != null);
-                    err.should.be.a.String;
-                    err.should.equal("guid, token and scope are required strings");
-                    assert(data == null);
-                    done();
-                });
-            });
-
-            it("should throw an error if scope is not present", function(done) {
-                var personaClient = persona.createClient("test-suite",personaClientConfig);
-
-                personaClient.removeScopeFromUser("guid","token",null,function(err,data) {
-                    assert(err != null);
-                    err.should.be.a.String;
-                    err.should.equal("guid, token and scope are required strings");
-                    assert(data == null);
-                    done();
-                });
-            });
-
-            it("should throw an error if scope is not a string", function(done) {
-                var personaClient = persona.createClient("test-suite",personaClientConfig);
-
-                personaClient.removeScopeFromUser("guid","token",{},function(err,data) {
-                    assert(err != null);
-                    err.should.be.a.String;
-                    err.should.equal("guid, token and scope are required strings");
-                    assert(data == null);
-                    done();
+                it("should throw an error if "+optsKey+" is not a string", function(done) {
+                    var badOpts = _.clone(goodOpts);
+                    badOpts[optsKey] = {foo:"bar"};
+                    try {
+                        personaClient.removeScopeFromUser(badOpts,function(err,data) {
+                            done("callback should not be invoked");
+                        });
+                    } catch (err) {
+                        err.message.should.equal(optsKey+" failed isString validation");
+                        done();
+                    }
                 });
             });
 
@@ -314,7 +228,7 @@ describe("Persona Client Test Suite - User Scope Tests", function() {
                 var personaClient = persona.createClient("test-suite",personaClientConfig);
 
                 personaClient.obtainToken({id: oauthClient, secret: oauthSecret}, function(err, data1) {
-                    personaClient.removeScopeFromUser('fdgNy6QWGmIAl7BRjEsFtk', data1.access_token, "test_scope", function(err, data){
+                    personaClient.removeScopeFromUser({guid:'fdgNy6QWGmIAl7BRjEsFtk', token:data1.access_token, scope:"test_scope"}, function(err, data){
                         assert(err == null);
                         assert(data == null);
                         done();
@@ -325,7 +239,7 @@ describe("Persona Client Test Suite - User Scope Tests", function() {
             it("should return error if remove scope fails with invalid token", function(done) {
                 var personaClient = persona.createClient("test-suite",personaClientConfig);
 
-                personaClient.removeScopeFromUser('fdgNy6QWGmIAl7BRjEsFtk', "invalid", "test_scope", function(err, data){
+                personaClient.removeScopeFromUser({guid:'fdgNy6QWGmIAl7BRjEsFtk', token:"invalid", scope:"test_scope"}, function(err, data){
                     assert(err != null);
                     err.should.be.a.String;
                     err.should.equal("setScopesForUser failed with status code 401");

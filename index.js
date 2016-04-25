@@ -979,9 +979,10 @@ PersonaClient.prototype.getScopesForUser = function(opts, callback) {
  * @param guid
  * @param token
  * @param scopeChange
+ * @param xRequestId
  * @param callback
  */
-PersonaClient.prototype._setScopesForUser = function(guid, token, scopeChange, xRequestId, callback) {
+PersonaClient.prototype._applyScopeChange = function(guid, token, scopeChange, xRequestId, callback) {
     if (_.isFunction(xRequestId)) {
         callback = xRequestId; // third param is actually next(), for backwards compat.
         xRequestId = uuid.v1();
@@ -1049,52 +1050,42 @@ PersonaClient.prototype._setScopesForUser = function(guid, token, scopeChange, x
 
 /**
  * Add a specific scope to a user
- * @param guid
- * @param token
- * @param scope
+ * @param {object} opts mandatory: guid, token, scope; optional: xRequestId
+ * @param {function} callback
  * @param callback
  */
-PersonaClient.prototype.addScopeToUser = function(guid, token, scope, callback) {
-    try {
-        _.map([guid, token, scope], function (arg) {
-            if (!_.isString(arg)) {
-                throw "guid, token and scope are required strings";
-            }
-        });
-    } catch (e) {
-        callback(e, null);
-        return;
-    }
+PersonaClient.prototype.addScopeToUser = function(opts, callback) {
+    validateOpts(opts,{guid: _.isString,token: _.isString,scope: _.isString});
+
+    var guid = opts.guid;
+    var token = opts.token;
+    var scope = opts.scope;
+    var xRequestId = opts.xRequestId || uuid.v1();
 
     var _this = this;
     var scopeChange = {$add:scope};
 
-    _this._setScopesForUser(guid, token, scopeChange, callback);
+    _this._applyScopeChange(guid, token, scopeChange, xRequestId, callback);
 };
 
 /**
  * Remove a specific scope from a user
- * @param guid
- * @param token
- * @param scope
+ * @param {object} opts mandatory: guid, token, scope; optional: xRequestId
+ * @param {function} callback
  * @param callback
  */
-PersonaClient.prototype.removeScopeFromUser = function(guid, token, scope, callback) {
-    try {
-        _.map([guid, token, scope], function (arg) {
-            if (!_.isString(arg)) {
-                throw "guid, token and scope are required strings";
-            }
-        });
-    } catch (e) {
-        callback(e, null);
-        return;
-    }
+PersonaClient.prototype.removeScopeFromUser = function(opts, callback) {
+    validateOpts(opts,{guid: _.isString,token: _.isString,scope: _.isString});
+
+    var guid = opts.guid;
+    var token = opts.token;
+    var scope = opts.scope;
+    var xRequestId = opts.xRequestId || uuid.v1();
 
     var _this = this;
     var scopeChange = {$remove:scope};
 
-    _this._setScopesForUser(guid, token, scopeChange, callback);
+    _this._applyScopeChange(guid, token, scopeChange, xRequestId, callback);
 };
 
 /**
