@@ -24,16 +24,34 @@ var ERROR_TYPES = {
     INSUFFICIENT_SCOPE : "insufficient_scope"
 };
 
+/**
+ * Validate method opts
+ * @param opts
+ * @param mandatoryKeys null|array|object a simple array of madatory keys, or key/value where value is a function to validate the value of key in opts
+ */
 var validateOpts = function validateOpts(opts,mandatoryKeys){
     if (!_.isObject(opts)) {
         throw new Error("Expecting opts to be an object");
     }
     if (!_.isEmpty(mandatoryKeys)) {
-        mandatoryKeys.forEach(function(mandatoryKey) {
-            if (_.isEmpty(opts[mandatoryKey])) {
-                throw new Error(mandatoryKey+" in opts cannot be empty");
-            }
-        });
+        if (_.isArray(mandatoryKeys)) {
+            mandatoryKeys.forEach(function(mandatoryKey) {
+                if (_.isEmpty(opts[mandatoryKey])) {
+                    throw new Error(mandatoryKey+" in opts cannot be empty");
+                }
+            });
+        } else if (_.isObject(mandatoryKeys)) {
+            _.keysIn(mandatoryKeys).forEach(function(mandatoryKey) {
+                var validationFn = mandatoryKeys[mandatoryKey];
+                if (_.isEmpty(opts[mandatoryKey])) {
+                    throw new Error(mandatoryKey+" in opts cannot be empty");
+                } else if (!validationFn(opts[mandatoryKey])) {
+                    throw new Error(mandatoryKey+" failed "+validationFn.name+" validation");
+                }
+            });
+        } else {
+            throw new Error("mandatoryKeys must be empty, array or object");
+        }
     }
 };
 
@@ -618,29 +636,16 @@ PersonaClient.prototype.obtainToken = function (opts, callback) {
 /**
  * Request an application authorization (client_id/secret pair) for a user with guid, authing with id and secret.
  * Use title to describe the purpose.
- * @param guid
- * @param title
- * @param id
- * @param secret
- * @param xRequestId
+ * @param opts array, mandatory params are guid, title, id, secret; optional params xRequestId
  * @param callback
  */
-PersonaClient.prototype.requestAuthorization = function (guid, title, id, secret, xRequestId, callback) {
-    if (_.isFunction(xRequestId)) {
-        callback = xRequestId; // third param is actually next(), for backwards compat.
-        xRequestId = uuid.v1();
-    }
-
-    try {
-        _.map([guid, title, id, secret], function (arg) {
-            if (!_.isString(arg)) {
-                throw "guid, title, id and secret are required strings";
-            }
-        });
-    } catch (e) {
-        callback(e,null);
-        return;
-    }
+PersonaClient.prototype.requestAuthorization = function (opts, callback) {
+    validateOpts(opts,{"guid": _.isString,"title": _.isString,"id": _.isString,"secret": _.isString});
+    var guid = opts.guid;
+    var title = opts.title;
+    var id = opts.id;
+    var secret = opts.secret;
+    var xRequestId = opts.xRequestId || uuid.v1();
 
     var _this = this;
     _this.obtainToken ({id: id,secret: secret, xRequestId: xRequestId},function (err,token) { // todo: push down into person itself. You should be able to request an authorization using basic auth with client id/secret
