@@ -65,6 +65,8 @@ If the validation fails, `401` will be returned to the client automatically.
 
 ### Pre-signing signing urls
 
+This functionality is deprecated since 3.0.0. It will be removed in 4.0.0.
+
 Signing:
 
 ```javascript
@@ -84,7 +86,7 @@ Checking:
 Requesting:
 
 ```javascript
-  personaClient.requestAuthorization('user_guid', 'Required for access to admin', 'client_id', 'client_secret', function(err,authorization) {
+  personaClient.requestAuthorization({guid: 'user_guid', title:'Required for access to admin', id:'client_id', secret:'client_secret'}, function(err,authorization) {
     // do stuff
   });
 ```
@@ -92,7 +94,7 @@ Requesting:
 Deleting:
 
 ```javascript
-  personaClient.deleteAuthorization('user_guid', 'Required for access to admin', 'client_id', 'client_secret', function(err) {
+  personaClient.deleteAuthorization({guid:'user_guid', authorizationClientId:'auth_client_id', id:'client_id', secret:'client_secret'}, function(err) {
     // do stuff
   });
 ```
@@ -102,7 +104,7 @@ Deleting:
 Via guid:
 
 ```javascript
-  personaClient.getProfileByGuid ('user_guid', 'token', function(err, user) {
+  personaClient.getProfileByGuid({guid:'user_guid', token:'token'}, function(err, user) {
     // do stuff
     var profile = user.profile;
   });
@@ -111,7 +113,7 @@ Via guid:
 ### Updating a user profile
 
 ```javascript
-  personaClient.updateProfile('user_guid', {first_name:'Max',surname:'Payne'} 'token', function(err, user) {
+  personaClient.updateProfile({guid:'user_guid', profile:{first_name:'Max',surname:'Payne'}, token:'token'}, function(err, user) {
     // do stuff
     var profile = user.profile;
   });
