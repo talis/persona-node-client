@@ -910,27 +910,15 @@ PersonaClient.prototype._removeTokenFromCache = function (id, secret, callback) 
 
 /**
  * Get scope information for a user
- * @param guid
- * @param token
- * @param xRequestId
+ * @param {object} opts mandatory: guid, token; optional: xRequestId
+ * @param {function} callback
  * @param callback
  */
-PersonaClient.prototype.getScopesForUser = function(guid, token, xRequestId, callback) {
-    if (_.isFunction(xRequestId)) {
-        callback = xRequestId; // third param is actually next(), for backwards compat.
-        xRequestId = uuid.v1();
-    }
-
-    try {
-        _.map([guid, token], function (arg) {
-            if (!_.isString(arg)) {
-                throw "guid and token are required strings";
-            }
-        });
-    } catch (e) {
-        callback(e,null);
-        return;
-    }
+PersonaClient.prototype.getScopesForUser = function(opts, callback) {
+    validateOpts(opts,{guid: _.isString,token: _.isString});
+    var guid = opts.guid;
+    var token = opts.token;
+    var xRequestId = opts.xRequestId || uuid.v1();
 
     var _this = this;
 

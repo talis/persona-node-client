@@ -8,6 +8,7 @@ var runAfterEach = require("./utils").afterEach;
 var leche = require("leche");
 var sinon = require("sinon");
 var withData = leche.withData;
+var _ = require("lodash");
 
 describe("Persona Client Test Suite - User Scope Tests", function() {
 
@@ -65,49 +66,32 @@ describe("Persona Client Test Suite - User Scope Tests", function() {
         });
 
         describe("- Get user scopes tests", function() {
-            it("should throw an error if guid is not present", function(done) {
-                personaClient.getScopesForUser(null,"token",function(err,data) {
-                    assert(err != null);
-                    err.should.be.a.String;
-                    err.should.equal("guid and token are required strings");
-                    assert(data == null);
-                    done();
+            _.map(["guid","token"],function(optsKey) {
+                var goodOpts = {guid: "some_guid", profile: {}, token: "some_token"};
+                it("should throw an error if "+optsKey+" is not present", function(done) {
+                    var badOpts = _.clone(goodOpts);
+                    badOpts[optsKey] = null;
+                    try {
+                        personaClient.getScopesForUser(badOpts,function(err,data) {
+                            done("callback should not be invoked");
+                        });
+                    } catch (err) {
+                        err.message.should.equal(optsKey+" in opts cannot be empty");
+                        done();
+                    }
                 });
-            });
 
-            it("should throw an error if guid is not a string", function(done) {
-                var personaClient = persona.createClient("test-suite",personaClientConfig);
-
-                personaClient.getScopesForUser({},"token",function(err,data) {
-                    assert(err != null);
-                    err.should.be.a.String;
-                    err.should.equal("guid and token are required strings");
-                    assert(data == null);
-                    done();
-                });
-            });
-
-            it("should throw an error if token is not present", function(done) {
-                var personaClient = persona.createClient("test-suite",personaClientConfig);
-
-                personaClient.getScopesForUser("guid",null,function(err,data) {
-                    assert(err != null);
-                    err.should.be.a.String;
-                    err.should.equal("guid and token are required strings");
-                    assert(data == null);
-                    done();
-                });
-            });
-
-            it("should throw an error if token is not a string", function(done) {
-                var personaClient = persona.createClient("test-suite",personaClientConfig);
-
-                personaClient.getScopesForUser("guid",{},function(err,data) {
-                    assert(err != null);
-                    err.should.be.a.String;
-                    err.should.equal("guid and token are required strings");
-                    assert(data == null);
-                    done();
+                it("should throw an error if "+optsKey+" is not a string", function(done) {
+                    var badOpts = _.clone(goodOpts);
+                    badOpts[optsKey] = {foo:"bar"};
+                    try {
+                        personaClient.getScopesForUser(badOpts,function(err,data) {
+                            done("callback should not be invoked");
+                        });
+                    } catch (err) {
+                        err.message.should.equal(optsKey+" failed isString validation");
+                        done();
+                    }
                 });
             });
 
@@ -115,7 +99,7 @@ describe("Persona Client Test Suite - User Scope Tests", function() {
                 var personaClient = persona.createClient("test-suite",personaClientConfig);
 
                 personaClient.obtainToken({id: oauthClient, secret: oauthSecret}, function(err, data1) {
-                    personaClient.getScopesForUser("guid", data1.access_token, function(err, data) {
+                    personaClient.getScopesForUser({guid:"guid", token:data1.access_token}, function(err, data) {
                         assert(err != null);
                         err.should.be.a.String;
                         err.should.equal("getScopesForUser failed with status code 404");
@@ -132,7 +116,7 @@ describe("Persona Client Test Suite - User Scope Tests", function() {
                 var personaClient = persona.createClient("test-suite",personaClientConfig);
 
                 personaClient.obtainToken({id: oauthClient, secret: oauthSecret}, function(err, data1) {
-                    personaClient.getScopesForUser('fdgNy6QWGmIAl7BRjEsFtk', data1.access_token, function(err, data) {
+                    personaClient.getScopesForUser({guid:'fdgNy6QWGmIAl7BRjEsFtk', token:data1.access_token}, function(err, data) {
                         assert(err == null);
                         assert(data != null);
                         data.should.be.an.instanceOf(Array).and.have.lengthOf(3);
@@ -145,7 +129,7 @@ describe("Persona Client Test Suite - User Scope Tests", function() {
             it("should return error if token is invalid", function(done) {
                 var personaClient = persona.createClient("test-suite",personaClientConfig);
 
-                personaClient.getScopesForUser('guid_does_exist', "invalid", function(err, data) {
+                personaClient.getScopesForUser({guid: 'guid_does_exist', token: "invalid"}, function(err, data) {
                     assert(err != null);
                     err.should.be.a.String;
                     err.should.equal("getScopesForUser failed with status code 401");
