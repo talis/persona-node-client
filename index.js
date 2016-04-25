@@ -759,32 +759,16 @@ PersonaClient.prototype.deleteAuthorization = function (opts, callback) {
 
 /**
  * Update a users profile
- * @param {string} guid
- * @param {object} profile Profile data - must be an object containing profile params
- * @param {string} token
- * @param {string} xRequestId
+ * @param {object} opts object, madatory: profile, token, guid; optional: xRequestId
+ * @param {function} callback
  * @callback callback
  */
-PersonaClient.prototype.updateProfile = function(guid, profile, token, xRequestId, callback) {
-    if (_.isFunction(xRequestId)) {
-        callback = xRequestId; // third param is actually next(), for backwards compat.
-        xRequestId = uuid.v1();
-    }
-
-    try {
-        [guid, token].forEach(function checkParamIsString(param) {
-            if (!_.isString(param)) {
-                throw "guid and token are required strings";
-            }
-        });
-        if (!_.isObject(profile)) {
-            throw "profile is a required object";
-        }
-
-    } catch (e) {
-        callback(e,null);
-        return;
-    }
+PersonaClient.prototype.updateProfile = function(opts, callback) {
+    validateOpts(opts,{guid: _.isString, token: _.isString, profile: _.isObject});
+    var guid = opts.guid;
+    var profile = opts.profile;
+    var token = opts.token;
+    var xRequestId = opts.xRequestId || uuid.v1();
 
     var _this = this;
     // Get a profile
