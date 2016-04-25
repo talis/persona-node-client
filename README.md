@@ -54,9 +54,10 @@ Here we validate the token supplied using a specific scope (optional)
      * Check if a user is allowed to impersonate another, and logs it
      */
     app.post('/some/route', function(req,res) {
+        req.param.scope = "some_scope";
         req.personaClient.validateHTTPBearerToken(req,res, function(){
            // you're good, do stuff
-        },"some_scope");
+        });
     });
 ```
 
