@@ -398,7 +398,7 @@ PersonaClient.prototype.validateHTTPBearerToken = function validateHTTPBearerTok
             response.set('Connection', 'close');
             response.json({
                 'error': 'unexpected_error',
-                'error_description': error,
+                'error_description': 'Unexpected error occurred',
             });
         }
 
