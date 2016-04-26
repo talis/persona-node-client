@@ -486,8 +486,8 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
                     res._setWasCalled.should.equal(true);
 
                     res._status.should.equal(500);
-                    res._json.error.should.equal("unexpected_error");
-                    res._json.error_description.should.equal("communication_issue");
+                    res._json.error.should.equal('unexpected_error');
+                    res._json.error_description.should.equal('Unexpected error occurred');
 
                     done();
                 });
@@ -556,8 +556,8 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
                     res._setWasCalled.should.equal(true);
 
                     res._status.should.equal(500);
-                    res._json.error.should.equal("unexpected_error");
-                    res._json.error_description.should.equal("communication_issue");
+                    res._json.error.should.equal('unexpected_error');
+                    res._json.error_description.should.equal('Unexpected error occurred');
 
                     done();
                 });
