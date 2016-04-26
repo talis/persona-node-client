@@ -413,7 +413,7 @@ PersonaClient.prototype.validateHTTPBearerToken = function validateHTTPBearerTok
             return callback(ERROR_TYPES.INVALID_TOKEN, null);
         }
 
-        throw exception;
+        return callback(exception.message, null);
     }
 };
 
