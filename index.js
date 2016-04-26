@@ -18,40 +18,48 @@ var DEBUG = "debug";
 var ERROR = "error";
 
 var ERROR_TYPES = {
-    VALIDATION_FAILURE : "validation_failure",
-    COMMUNICATION_ISSUE :"communication_issue",
-    INVALID_TOKEN : "invalid_token",
-    INSUFFICIENT_SCOPE : "insufficient_scope"
+    VALIDATION_FAILURE: 'validation_failure',
+    COMMUNICATION_ISSUE: 'communication_issue',
+    INVALID_TOKEN: 'invalid_token',
+    INSUFFICIENT_SCOPE: 'insufficient_scope',
+    INVALID_ARGUMENTS: 'invalid_arguments',
 };
 
 /**
  * Validate method opts
  * @param opts
  * @param mandatoryKeys null|array|object a simple array of madatory keys, or key/value where value is a function to validate the value of key in opts
+ * @throws Error
  */
-var validateOpts = function validateOpts(opts,mandatoryKeys){
+var validateOpts = function validateOpts(opts, mandatoryKeys) {
+    var error = new Error();
+    error.name = ERROR_TYPES.INVALID_ARGUMENTS;
+
     if (!_.isObject(opts)) {
-        throw new Error("Expecting opts to be an object");
+        throw new Error('Expecting opts to be an object');
     }
-    if (!_.isEmpty(mandatoryKeys)) {
-        if (_.isArray(mandatoryKeys)) {
-            mandatoryKeys.forEach(function(mandatoryKey) {
-                if (_.isEmpty(opts[mandatoryKey])) {
-                    throw new Error(mandatoryKey+" in opts cannot be empty");
-                }
-            });
-        } else if (_.isObject(mandatoryKeys)) {
-            _.keysIn(mandatoryKeys).forEach(function(mandatoryKey) {
-                var validationFn = mandatoryKeys[mandatoryKey];
-                if (_.isEmpty(opts[mandatoryKey])) {
-                    throw new Error(mandatoryKey+" in opts cannot be empty");
-                } else if (!validationFn(opts[mandatoryKey])) {
-                    throw new Error(mandatoryKey+" failed "+validationFn.name+" validation");
-                }
-            });
-        } else {
-            throw new Error("mandatoryKeys must be empty, array or object");
-        }
+
+    if (_.isArray(mandatoryKeys)) {
+        mandatoryKeys.forEach(function eachMandatoryKey(mandatoryKey) {
+            if (_.isEmpty(opts[mandatoryKey])) {
+                error.message = mandatoryKey + ' in opts cannot be empty';
+                throw error;
+            }
+        });
+    } else if (_.isObject(mandatoryKeys)) {
+        _.keysIn(mandatoryKeys).forEach(function eachMandatoryKey(mandatoryKey) {
+            var validationFn = mandatoryKeys[mandatoryKey];
+            if (_.isEmpty(opts[mandatoryKey])) {
+                error.message = mandatoryKey + ' in opts cannot be empty';
+                throw error;
+            } else if (!validationFn(opts[mandatoryKey])) {
+                error.message = mandatoryKey + ' failed ' + validationFn.name + ' validation';
+                throw error;
+            }
+        });
+    } else {
+        error.message = 'mandatoryKeys must be empty, array or object';
+        throw error;
     }
 };
 
@@ -344,55 +352,69 @@ PersonaClient.prototype.validateToken = function (opts, next) {
  * @param {Object} response - HTTP response object. If you want to validate against a scope (pre-2.0 behavior), provide it as req.params.scope
  * @callback next - Called with either an error as the first param or "ok" as the result in the second param.
  */
-PersonaClient.prototype.validateHTTPBearerToken = function (request, response, next) {
-    if (arguments.length > 3) {
-        throw "Usage: validateHTTPBearerToken(request, response, next)";
-    }
-    var token = this._getToken(request);
-    var xRequestId = this.getXRequestId(request);
+PersonaClient.prototype.validateHTTPBearerToken = function validateHTTPBearerToken(request, response, next) {
+    var config = {
+        token: this._getToken(request),
+        scope: request.param('scope'),
+        xRequestId: this.getXRequestId(request),
+    };
 
-    this.validateToken({token: token, scope: request.param("scope"), xRequestId: xRequestId}, function (error, validationResult) {
+    if (arguments.length > 3) {
+        throw new Error('Usage: validateHTTPBearerToken(request, response, next)');
+    }
+
+    function callback(error, validationResult) {
         if (!error) {
             next(null, validationResult);
             return;
         }
 
-        switch(error) {
+        switch (error) {
         case ERROR_TYPES.INVALID_TOKEN:
             response.status(401);
             response.json({
-                "error": "no_token",
-                "error_description": "No token supplied"
+                'error': 'no_token',
+                'error_description': 'No token supplied',
             });
             break;
         case ERROR_TYPES.VALIDATION_FAILURE:
             response.status(401);
-            response.set("Connection", "close");
+            response.set('Connection', 'close');
             response.json({
-                "error": "invalid_token",
-                "error_description": "The token is invalid or has expired"
+                'error': 'invalid_token',
+                'error_description': 'The token is invalid or has expired',
             });
             break;
         case ERROR_TYPES.INSUFFICIENT_SCOPE:
             response.status(403);
-            response.set("Connection", "close");
+            response.set('Connection', 'close');
             response.json({
-                "error": "insufficient_scope",
-                "error_description": "The supplied token is missing a required scope"
+                'error': 'insufficient_scope',
+                'error_description': 'The supplied token is missing a required scope',
             });
             break;
         default:
             response.status(500);
-            response.set("Connection", "close");
+            response.set('Connection', 'close');
             response.json({
-                "error": "unexpected_error",
-                "error_description": error
+                'error': 'unexpected_error',
+                'error_description': 'Unexpected error occurred',
             });
         }
 
         next(error, null);
         return;
-    });
+    }
+
+    try {
+        this.validateToken(config, callback);
+    } catch (exception) {
+        if (exception.name === ERROR_TYPES.INVALID_ARGUMENTS) {
+            return callback(ERROR_TYPES.INVALID_TOKEN, null);
+        }
+
+        return callback(exception.message, null);
+    }
 };
 
 /**
