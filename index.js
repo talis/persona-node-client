@@ -18,40 +18,49 @@ var DEBUG = "debug";
 var ERROR = "error";
 
 var ERROR_TYPES = {
-    VALIDATION_FAILURE : "validation_failure",
-    COMMUNICATION_ISSUE :"communication_issue",
-    INVALID_TOKEN : "invalid_token",
-    INSUFFICIENT_SCOPE : "insufficient_scope"
+    VALIDATION_FAILURE: 'validation_failure',
+    COMMUNICATION_ISSUE: 'communication_issue',
+    INVALID_TOKEN: 'invalid_token',
+    INSUFFICIENT_SCOPE: 'insufficient_scope',
+    INVALID_ARGUMENTS: 'invalid_arguments',
 };
 
 /**
  * Validate method opts
- * @param opts
+ * @param opts 
  * @param mandatoryKeys null|array|object a simple array of madatory keys, or key/value where value is a function to validate the value of key in opts
+ * @throws Error 
  */
-var validateOpts = function validateOpts(opts,mandatoryKeys){
+var validateOpts = function validateOpts(opts, mandatoryKeys) {
+    var error = new Error();
+    error.name = ERROR_TYPES.INVALID_ARGUMENTS;
+
     if (!_.isObject(opts)) {
-        throw new Error("Expecting opts to be an object");
+        error.message = 'Expecting opts to be an object';
+        throw error;
     }
-    if (!_.isEmpty(mandatoryKeys)) {
-        if (_.isArray(mandatoryKeys)) {
-            mandatoryKeys.forEach(function(mandatoryKey) {
-                if (_.isEmpty(opts[mandatoryKey])) {
-                    throw new Error(mandatoryKey+" in opts cannot be empty");
-                }
-            });
-        } else if (_.isObject(mandatoryKeys)) {
-            _.keysIn(mandatoryKeys).forEach(function(mandatoryKey) {
-                var validationFn = mandatoryKeys[mandatoryKey];
-                if (_.isEmpty(opts[mandatoryKey])) {
-                    throw new Error(mandatoryKey+" in opts cannot be empty");
-                } else if (!validationFn(opts[mandatoryKey])) {
-                    throw new Error(mandatoryKey+" failed "+validationFn.name+" validation");
-                }
-            });
-        } else {
-            throw new Error("mandatoryKeys must be empty, array or object");
-        }
+
+    if (_.isArray(mandatoryKeys)) {
+        mandatoryKeys.forEach(function eachMandatoryKey(mandatoryKey) {
+            if (_.isEmpty(opts[mandatoryKey])) {
+                error.message = mandatoryKey + ' in opts cannot be empty';
+                throw error;
+            }
+        });
+    } else if (_.isObject(mandatoryKeys)) {
+        _.keysIn(mandatoryKeys).forEach(function eachMandatoryKey(mandatoryKey) {
+            var validationFn = mandatoryKeys[mandatoryKey];
+            if (_.isEmpty(opts[mandatoryKey])) {
+                error.message = mandatoryKey + ' in opts cannot be empty';
+                throw error;
+            } else if (!validationFn(opts[mandatoryKey])) {
+                error.message = mandatoryKey + ' failed ' + validationFn.name + ' validation';
+                throw error;
+            }
+        });
+    } else {
+        error.message = 'mandatoryKeys must be empty, array or object';
+        throw error;
     }
 };
 
@@ -401,7 +410,11 @@ PersonaClient.prototype.validateHTTPBearerToken = function validateHTTPBearerTok
     try {
         this.validateToken(config, callback);
     } catch (exception) {
-        return callback(ERROR_TYPES.INVALID_TOKEN, null);
+        if (exception.name === ERROR_TYPES.INVALID_ARGUMENTS) {
+            return callback(ERROR_TYPES.INVALID_TOKEN, null);
+        }
+
+        throw exception;
     }
 };
 
