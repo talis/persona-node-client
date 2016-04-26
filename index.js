@@ -27,17 +27,16 @@ var ERROR_TYPES = {
 
 /**
  * Validate method opts
- * @param opts 
+ * @param opts
  * @param mandatoryKeys null|array|object a simple array of madatory keys, or key/value where value is a function to validate the value of key in opts
- * @throws Error 
+ * @throws Error
  */
 var validateOpts = function validateOpts(opts, mandatoryKeys) {
     var error = new Error();
     error.name = ERROR_TYPES.INVALID_ARGUMENTS;
 
     if (!_.isObject(opts)) {
-        error.message = 'Expecting opts to be an object';
-        throw error;
+        throw new Error('Expecting opts to be an object');
     }
 
     if (_.isArray(mandatoryKeys)) {
