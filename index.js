@@ -9,7 +9,7 @@ var CacheService = require("cache-service");
 var fs = require("fs");
 var uuid = require('uuid');
 
-var clientVer = JSON.parse(fs.readFileSync("package.json", "utf8")).version || "unknown";
+var clientVer = JSON.parse(fs.readFileSync(__dirname + '/package.json', 'utf8')).version || 'unknown';
 
 var PUBLIC_KEY_CACHE_NAME = "public_key";
 
