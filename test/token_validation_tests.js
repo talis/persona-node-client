@@ -154,7 +154,12 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
                     assert.equal(res._jsonWasCalled, false);
                     assert.equal(res._setWasCalled, false);
 
-                    assert.equal(result, "ok");
+                    result.should.have.property("scopes");
+                    result.should.have.property("iat");
+                    result.should.have.property("exp");
+                    result.should.have.property("aud");
+                    result.should.have.property("jti");
+                    result.scopes.should.eql(["standard_user"]);
                     done();
                 });
             });
@@ -218,7 +223,12 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
                     assert.equal(res._jsonWasCalled, false);
                     assert.equal(res._setWasCalled, false);
 
-                    assert.equal(result, "ok");
+                    result.should.have.property("scopes");
+                    result.should.have.property("iat");
+                    result.should.have.property("exp");
+                    result.should.have.property("aud");
+                    result.should.have.property("jti");
+                    result.scopes.should.eql(["standard_user"]);
                     done();
                 });
             });
@@ -317,7 +327,12 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
                     assert.equal(res._jsonWasCalled, false);
                     assert.equal(res._setWasCalled, false);
 
-                    assert.equal(result, "ok");
+                    result.should.have.property("scopes");
+                    result.should.have.property("iat");
+                    result.should.have.property("exp");
+                    result.should.have.property("aud");
+                    result.should.have.property("jti");
+                    result.scopes.should.eql(["su", "super_user"]);
                     done();
                 });
             });
@@ -350,7 +365,12 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
                     assert.equal(res._jsonWasCalled, false);
                     assert.equal(res._setWasCalled, false);
 
-                    assert.equal(result, "ok");
+                    result.should.have.property("scopeCount");
+                    result.should.have.property("iat");
+                    result.should.have.property("exp");
+                    result.should.have.property("aud");
+                    result.should.have.property("jti");
+                    result.scopeCount.should.eql(26);
                     done();
                 });
             });
@@ -384,7 +404,12 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
                     assert.equal(res._jsonWasCalled, false);
                     assert.equal(res._setWasCalled, false);
 
-                    assert.equal(result, "ok");
+                    result.should.have.property("scopeCount");
+                    result.should.have.property("iat");
+                    result.should.have.property("exp");
+                    result.should.have.property("aud");
+                    result.should.have.property("jti");
+                    result.scopeCount.should.eql(26);
                     done();
                 });
             });
@@ -591,10 +616,14 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
                     assert.equal(res._statusWasCalled, false);
                     assert.equal(res._jsonWasCalled, false);
                     assert.equal(res._setWasCalled, false);
-
-                    assert.equal(result, "ok");
                     assert.equal(personaClient.http.request.called, false);
 
+                    result.should.have.property("scopes");
+                    result.should.have.property("iat");
+                    result.should.have.property("exp");
+                    result.should.have.property("aud");
+                    result.should.have.property("jti");
+                    result.scopes.should.eql(["standard_user"]);
                     done();
                 });
             });
