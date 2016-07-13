@@ -248,8 +248,10 @@ PersonaClient.prototype._getPublicKey = function getPublicKey(cb, refresh, xRequ
 
 /**
  * Validate bearer token locally, via JWT verification.
- * @param {object} opts - Options object, must include token to validate, and optionally scope to validate against, and optional xRequestId to pass through.
- * @callback next - Called with either an error as the first param or "ok" as the result in the second param.
+ * @param {object} opts - Options object, must include token to validate, and optionally scope to
+ * validate against, and optional xRequestId to pass through.
+ * @callback next - Called with either an error as the first param or the decoded JWT as the result
+ * in the second param.
  */
 PersonaClient.prototype.validateToken = function (opts, next) {
     validateOpts(opts,['token']);
@@ -267,7 +269,7 @@ PersonaClient.prototype.validateToken = function (opts, next) {
         return next(ERROR_TYPES.INVALID_TOKEN, null);
     }
 
-    var headScopeThenVerify = function headScope(scope, callback) {
+    var headScopeThenVerify = function headScope(decodedToken, scope, callback) {
         var log = this.log.bind(this);
         log("debug", "Verifying token against scope " + scope + " via Persona");
 
@@ -286,7 +288,7 @@ PersonaClient.prototype.validateToken = function (opts, next) {
             switch(response.statusCode) {
             case 204:
                 log("debug", "Verification of token via Persona passed");
-                return callback(null, "ok");
+                return callback(null, decodedToken);
             case 401:
                 log("debug", "Verification of token via Persona failed");
                 return callback(ERROR_TYPES.VALIDATION_FAILURE, null);
@@ -298,7 +300,7 @@ PersonaClient.prototype.validateToken = function (opts, next) {
                 } else {
                     // Try again with su
                     log("debug", "Verification of token via Persona using scope " + scope + " failed, trying su...");
-                    return headScopeThenVerify("su", callback);
+                    return headScopeThenVerify(decodedToken, "su", callback);
                 }
                 break;
             default:
@@ -326,10 +328,10 @@ PersonaClient.prototype.validateToken = function (opts, next) {
 
             if(scope && decodedToken.hasOwnProperty("scopeCount")) {
                 debug("Token has too many scopes (" + decodedToken.scopeCount + ") to put in payload, asking Persona...");
-                return headScopeThenVerify(scope, next);
+                return headScopeThenVerify(decodedToken, scope, next);
             } else if (scope == null || _.includes(decodedToken.scopes, "su") || _.includes(decodedToken.scopes, scope)) {
                 debug("Verifying token locally passed");
-                return next(null, "ok");
+                return next(null, decodedToken);
             } else {
                 debug("Verification of token locally failed with insufficient scope (" + scope + ")");
                 return next(ERROR_TYPES.INSUFFICIENT_SCOPE, null);
