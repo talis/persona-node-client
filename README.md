@@ -1,4 +1,5 @@
 [![Build Status](https://travis-ci.org/talis/persona-node-client.svg?branch=master)](https://travis-ci.org/talis/persona-node-client)
+[![Dependency Status](https://dependencyci.com/github/talis/persona-node-client/badge)](https://dependencyci.com/github/talis/persona-node-client)
 
 Node Client for Persona, responsible for retrieving, generating, caching and validating OAuth Tokens.
 
