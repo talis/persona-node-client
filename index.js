@@ -250,8 +250,12 @@ PersonaClient.prototype._getPublicKey = function getPublicKey(cb, refresh, xRequ
  * Validate bearer token locally, via JWT verification.
  * @param {object} opts - Options object, must include token to validate, and optionally scope to
  * validate against, and optional xRequestId to pass through.
- * @callback next - Called with either an error as the first param or the decoded JWT as the result
- * in the second param.
+ * @callback next - Called with the following arguments:
+ * 1st argument: an error string (see errorTypes) if validation failed for any reason otherwise
+ * null.
+ * 2nd argument: "ok" if validation passed otherwise null.
+ * 3rd argument: The decoded JWT or null if there was no/invalid token or there was a problem
+ * validating.
  */
 PersonaClient.prototype.validateToken = function (opts, next) {
     validateOpts(opts,['token']);
@@ -269,7 +273,7 @@ PersonaClient.prototype.validateToken = function (opts, next) {
         return next(ERROR_TYPES.INVALID_TOKEN, null);
     }
 
-    var headScopeThenVerify = function headScope(decodedToken, scope, callback) {
+    var headScopeThenVerify = function headScope(scope, callback, decodedToken) {
         var log = this.log.bind(this);
         log("debug", "Verifying token against scope " + scope + " via Persona");
 
@@ -288,28 +292,28 @@ PersonaClient.prototype.validateToken = function (opts, next) {
             switch(response.statusCode) {
             case 204:
                 log("debug", "Verification of token via Persona passed");
-                return callback(null, decodedToken);
+                return callback(null, "ok", decodedToken);
             case 401:
                 log("debug", "Verification of token via Persona failed");
-                return callback(ERROR_TYPES.VALIDATION_FAILURE, null);
+                return callback(ERROR_TYPES.VALIDATION_FAILURE, null, decodedToken);
             case 403:
                 if(scope === "su") {
                     // We tried using su and can go no further
                     log("debug", "Verification of token via Persona failed with insufficient scope");
-                    return callback(ERROR_TYPES.INSUFFICIENT_SCOPE, null);
+                    return callback(ERROR_TYPES.INSUFFICIENT_SCOPE, null, decodedToken);
                 } else {
                     // Try again with su
                     log("debug", "Verification of token via Persona using scope " + scope + " failed, trying su...");
-                    return headScopeThenVerify(decodedToken, "su", callback);
+                    return headScopeThenVerify("su", callback, decodedToken);
                 }
                 break;
             default:
                 log("error", "Error verifying token via Persona: " + response.statusCode);
-                return callback(ERROR_TYPES.COMMUNICATION_ISSUE, null);
+                return callback(ERROR_TYPES.COMMUNICATION_ISSUE, null, decodedToken);
             }
         }).on("error", function onError(error) {
             log("error", "Verification of token via Persona encountered an unknown error");
-            return callback(error, null);
+            return callback(error, null, decodedToken);
         }).end();
     };
     headScopeThenVerify = headScopeThenVerify.bind(this);
@@ -323,25 +327,25 @@ PersonaClient.prototype.validateToken = function (opts, next) {
         jwt.verify(token, publicKey, jwtConfig, function onVerify(error, decodedToken) {
             if(error) {
                 debug("Verifying token locally failed");
-                return next(ERROR_TYPES.VALIDATION_FAILURE, null);
+                return next(ERROR_TYPES.VALIDATION_FAILURE, null, decodedToken);
             }
 
             if(scope && decodedToken.hasOwnProperty("scopeCount")) {
                 debug("Token has too many scopes (" + decodedToken.scopeCount + ") to put in payload, asking Persona...");
-                return headScopeThenVerify(decodedToken, scope, next);
+                return headScopeThenVerify(scope, next, decodedToken);
             } else if (scope == null || _.includes(decodedToken.scopes, "su") || _.includes(decodedToken.scopes, scope)) {
                 debug("Verifying token locally passed");
-                return next(null, decodedToken);
+                return next(null, "ok", decodedToken);
             } else {
                 debug("Verification of token locally failed with insufficient scope (" + scope + ")");
-                return next(ERROR_TYPES.INSUFFICIENT_SCOPE, null);
+                return next(ERROR_TYPES.INSUFFICIENT_SCOPE, null, decodedToken);
             }
         });
     }.bind(this);
 
     this._getPublicKey(function retrievedPublicKey(err, publicKey) {
         if (err) {
-            return next(err, null);
+            return next(err, null, null);
         }
 
         return verifyToken(publicKey);
@@ -352,7 +356,12 @@ PersonaClient.prototype.validateToken = function (opts, next) {
  * Express middleware that can be used to verify a token.
  * @param {Object} request - HTTP request object.
  * @param {Object} response - HTTP response object. If you want to validate against a scope (pre-2.0 behavior), provide it as req.params.scope
- * @callback next - Called with either an error as the first param or "ok" as the result in the second param.
+ * @callback next - Called with the following arguments:
+ * 1st argument: an error string (see errorTypes) if validation failed for any reason otherwise
+ * null.
+ * 2nd argument: "ok" if validation passed otherwise null.
+ * 3rd argument: The decoded JWT or null if there was no/invalid token or there was a problem
+ * validating.
  */
 PersonaClient.prototype.validateHTTPBearerToken = function validateHTTPBearerToken(request, response, next) {
     var config = {
@@ -365,9 +374,9 @@ PersonaClient.prototype.validateHTTPBearerToken = function validateHTTPBearerTok
         throw new Error('Usage: validateHTTPBearerToken(request, response, next)');
     }
 
-    function callback(error, validationResult) {
+    function callback(error, validationResult, decodedToken) {
         if (!error) {
-            next(null, validationResult);
+            next(null, validationResult, decodedToken);
             return;
         }
 
@@ -404,7 +413,7 @@ PersonaClient.prototype.validateHTTPBearerToken = function validateHTTPBearerTok
             });
         }
 
-        next(error, null);
+        next(error, null, decodedToken);
         return;
     }
 
@@ -412,10 +421,10 @@ PersonaClient.prototype.validateHTTPBearerToken = function validateHTTPBearerTok
         this.validateToken(config, callback);
     } catch (exception) {
         if (exception.name === ERROR_TYPES.INVALID_ARGUMENTS) {
-            return callback(ERROR_TYPES.INVALID_TOKEN, null);
+            return callback(ERROR_TYPES.INVALID_TOKEN, null, null);
         }
 
-        return callback(exception.message, null);
+        return callback(exception.message, null, null);
     }
 };
 
