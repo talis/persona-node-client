@@ -107,7 +107,7 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
             }, 1500);
         });
 
-        it("should not validate an missing token", function(done) {
+        it("should not validate a missing token", function(done) {
             var req = _getStubRequest(null, null);
             var res = _getStubResponse();
 
