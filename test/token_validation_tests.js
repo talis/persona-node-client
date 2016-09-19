@@ -107,6 +107,30 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
             }, 1500);
         });
 
+        it("should not validate an missing token", function(done) {
+            var req = _getStubRequest(null, null);
+            var res = _getStubResponse();
+
+            // the callback wont be called internally because this is middleware
+            // therefore we need to call validate token and wait a couple of seconds for the
+            // request to fail and assert the response object
+            personaClient.validateHTTPBearerToken(req, res, function validatedToken(err, result, decodedToken) {
+                err.should.be.equal(persona.errorTypes.VALIDATION_FAILURE);
+                res._statusWasCalled.should.equal(true);
+                res._jsonWasCalled.should.equal(true);
+                res._setWasCalled.should.equal(true);
+
+                res._status.should.equal(401);
+                res._json.error.should.equal("invalid_token");
+                res._json.error_description.should.equal("The token is invalid or has expired");
+
+                (result == null).should.equal(true);
+                (decodedToken == null).should.equal(true);
+
+                done();
+            });
+        });
+
         it("should not validate an invalid token", function(done) {
             var req = _getStubRequest("skldfjlskj", null);
             var res = _getStubResponse();
