@@ -108,9 +108,6 @@ describe("Persona Client Test Suite - User Profile Tests", function() {
             });
             it("should return a user object if user found", function(done) {
                 var expected = {
-                    "_id": {
-                        "$id": "56a24521f8203aa459000024"
-                    },
                     "guid": "fdgNy6QWGmIAl7BRjEsFtA",
                     "gupids": [
                         "google:AItOawmPwlmsEaQiLSJCISvHLO3uT7F4tYKwtUE",
@@ -174,9 +171,6 @@ describe("Persona Client Test Suite - User Profile Tests", function() {
 
             it("should return a user if success", function(done){
                 var expected = {
-                    "_id": {
-                        "$id": "56a24521f8203aa459000024"
-                    },
                     "guid": "fdgNy6QWGmIAl7BRjEsFtA",
                     "gupids": [
                         "google:AItOawmPwlmsEaQiLSJCISvHLO3uT7F4tYKwtUE",

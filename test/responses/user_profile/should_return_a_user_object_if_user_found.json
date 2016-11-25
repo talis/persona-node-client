@@ -63,9 +63,6 @@
         "body": "",
         "status": 200,
         "response": {
-            "_id": {
-                "$id": "56a24521f8203aa459000024"
-            },
             "guid": "fdgNy6QWGmIAl7BRjEsFtA",
             "gupids": [
                 "google:AItOawmPwlmsEaQiLSJCISvHLO3uT7F4tYKwtUE",
@@ -75,14 +72,6 @@
                 "first_name": "TN",
                 "surname": "TestAccount",
                 "email": "test.tn@talis.com"
-            },
-            "created": {
-                "sec": 1453475105,
-                "usec": 923000
-            },
-            "last_updated": {
-                "sec": 1456316195,
-                "usec": 972000
             }
         },
         "headers": {
