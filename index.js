@@ -929,103 +929,107 @@ PersonaClient.prototype.getProfileByGuid = function(opts, callback){
 };
 
 /**
- * Get all profiles for an array of guids.
+* Get all profiles for an array of guids.
+ *
+ * @param  {object}   opts     [description]
+ * @param  {array}    opts.guids  Array of GUIDs to fetch profiles for
+ * @param  {string}   opts.token  Auth token
+ * @param  {string}   opts.xRequestId Optional request ID to pass through in logging.
+ * @param  {Function} callback
  */
- PersonaClient.prototype.getProfilesForGuids = function(opts, callback){
-     validateOpts(opts,{guids: _.isArray,token: _.isString});
-     var guids = opts.guids;
-     var token = opts.token;
-     var xRequestId = opts.xRequestId || uuid.v4();
-     var personaQueryLimit = 25;
-     var _this = this;
-     var guidList = [];
-     var guidListArray = [];
-     // loop through passed guids and build an array of guids that will be used to query persona
-     guids.forEach(function (guid) {
-         guidList.push(guid);
-         // if we've collected personaQueryLimit guids in the current guidList array, push it onto the guidListArray and
-         // reset for next lot
-         if (guidList.length === personaQueryLimit) {
-             guidListArray.push(guidList);
-             guidList = [];
-         }
-     });
-     // see if we have any guidList left that have not been pushed to the guidListArray yet, push them now if that's the case
-     if (guidList.length > 0) {
-         guidListArray.push(guidList);
-     }
-     var parallelFNs = [];
-     // for each of the "blocks" of users we want to hydrate, create a parallel function and add it to
-     // an array. Each of these functions will call Persona with a block of the users to hydrate...
-     guidListArray.forEach(function (guidList) {
-         var ids = '';
-         // generate a comma-sep list of user's from the list of users we need to process
-         guidList.forEach(function (guid) {
-             ids += (ids !== '') ? ',' + guid : guid;
-         });
-         parallelFNs.push(function (cb) {
-             var options = {
-                 hostname: _this.config.persona_host,
-                 port: _this.config.persona_port,
-                 path: "/users?guids=" + ids,
-                 method: "GET",
-                 headers: {
-                     "Authorization": "Bearer " + token,
-                     'User-Agent': _this.userAgent,
-                     'X-Request-Id': xRequestId
-                 }
-             };
-             var personaReq = _this.http.request(options, function (personaResp) {
-                 var userString = '';
-                 personaResp.on('data', function (chunk) {
-                     userString += chunk;
-                 });
-                 personaResp.on('end', function () {
-                     if (personaResp.statusCode === 200) {
-                         var data = JSON.parse(userString);
-                         var results = [];
-                         if (!_.isEmpty(data)) {
-                             if (_.isArray(data)) {
-                                 results = data;
-                             } else {
-                                 results.push(data);
-                             }
-                         }
-                         console.log('LOGGING Got results from persona, calling back...', results);
-                         cb(null, results);
-                     } else {
-                         console.log('LOGGING Got ' + personaResp.statusCode + ' while retrieving users with HTTP options: ' + JSON.stringify(options));
-                         var error = new Error();
-                         error.http_code = personaResp.statusCode || 404;
-                         cb(error, null);
-                     }
-                 });
-             });
-             personaReq.on('error', function (err) {
-                 cb(err, null);
-             });
-             personaReq.on('clientError', function (err) {
-                 cb(err, null);
-             });
-             personaReq.end();
-         });
-     });
-     // execute the functions in parallel - so all calls will be made to persona in parallel
-     async.parallel(parallelFNs, function (err, userArrays) {
-         if (err) {
-             var errMess = "getProfilesForGuids problem: " + err;
-             _this.error(errMess);
-             callback(errMess, null);
-         } else if (userArrays) {
-             // we could potentially have multiple arrays of users here, so merge them into one
-             var mergedUsers = [].concat.apply([], userArrays);
-             callback(null, mergedUsers);
-         } else {
-             callback(null, null);
-         }
-     });
+PersonaClient.prototype.getProfilesForGuids = function(opts, callback) {
+    validateOpts(opts,{guids: _.isArray,token: _.isString});
+    var guids = opts.guids;
+    var token = opts.token;
+    var xRequestId = opts.xRequestId || uuid.v4();
+    var personaQueryLimit = 25;
+    var _this = this;
+    var guidList = [];
+    var guidListArray = [];
+    // loop through passed guids and build an array of guids that will be used to query persona
+    guids.forEach(function (guid) {
+        guidList.push(guid);
+        // if we've collected personaQueryLimit guids in the current guidList array, push it onto the guidListArray and
+        // reset for next lot
+        if (guidList.length === personaQueryLimit) {
+            guidListArray.push(guidList);
+            guidList = [];
+        }
+    });
+    // see if we have any guidList left that have not been pushed to the guidListArray yet, push them now if that's the case
+    if (guidList.length > 0) {
+        guidListArray.push(guidList);
+    }
+    var parallelFNs = [];
+    // for each of the "blocks" of users we want to hydrate, create a parallel function and add it to
+    // an array. Each of these functions will call Persona with a block of the users to hydrate...
+    guidListArray.forEach(function (guidList) {
+        var ids = '';
+        // generate a comma-sep list of user's from the list of users we need to process
+        guidList.forEach(function (guid) {
+            ids += (ids !== '') ? ',' + guid : guid;
+        });
+        parallelFNs.push(function pushFn(cb) {
+            var options = {
+                hostname: _this.config.persona_host,
+                port: _this.config.persona_port,
+                path: '/users?guids=' + ids,
+                method: "GET",
+                headers: {
+                    'Authorization': 'Bearer ' + token,
+                    'User-Agent': _this.userAgent,
+                    'X-Request-Id': xRequestId
+                }
+            };
+            var personaReq = _this.http.request(options, function personaReq(personaResp) {
+                var userString = '';
+                personaResp.on('data', function onData(chunk) {
+                    userString += chunk;
+                });
+                personaResp.on('end', function onEnd() {
+                    if (personaResp.statusCode === 200) {
+                        var data = JSON.parse(userString);
+                        var results = [];
+                        if (!_.isEmpty(data)) {
+                            if (_.isArray(data)) {
+                                results = data;
+                            } else {
+                                results.push(data);
+                            }
+                        }
+                        cb(null, results);
+                    } else {
+                        var error = new Error();
+                        error.http_code = personaResp.statusCode || 404;
+                        cb(error, null);
+                    }
+                });
+            });
+            personaReq.on('error', function onError(err) {
+                cb(err, null);
+            });
+            personaReq.on('clientError', function onClientError(err) {
+                cb(err, null);
+            });
+            personaReq.end();
+        });
+    });
+    // execute the functions in parallel - so all calls will be made to persona in parallel
+    async.parallel(parallelFNs, function (err, userArrays) {
+        if (err) {
+            var errMess = 'getProfilesForGuids problem: ' + err;
+            _this.error(errMess);
+            callback(errMess, null);
+        } else if (userArrays) {
+            // we could potentially have multiple arrays of users here, so merge them into one
+            var mergedUsers = [].concat.apply([], userArrays);
+            callback(null, mergedUsers);
+        } else {
+            callback(null, null);
+        }
+    });
  };
- 
+
 /**
  * Removes any tokens that are cached for the given id and secret
  * @param id
