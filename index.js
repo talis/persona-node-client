@@ -940,17 +940,13 @@ PersonaClient.prototype.getProfileByGuid = function(opts, callback){
  */
 PersonaClient.prototype.getProfilesForGuids = function getProfilesForGuids(opts, callback) {
     validateOpts(opts,{ guids: _.isArray, token: _.isString });
+    var log = this.log.bind(this);
     var guids = opts.guids;
     var token = opts.token;
     var xRequestId = opts.xRequestId || uuid.v4();
     var _this = this;
 
-    var ids = '';
-
-    // generate a comma-sep list of user's from the list of users we need to process
-    guids.forEach(function (guid) {
-        ids += (ids !== '') ? ',' + guid : guid;
-    });
+    var ids = guids.join(',');
 
     var options = {
         hostname: _this.config.persona_host,
@@ -985,7 +981,9 @@ PersonaClient.prototype.getProfilesForGuids = function getProfilesForGuids(opts,
                 callback(null, results);
             } else {
                 var error = new Error();
-                error.http_code = personaResp.statusCode || 404;
+                var statusCode = personaResp.statusCode || 0;
+                error.http_code = statusCode;
+                log('error', 'getProfilesForGuids failed with status code ' + statusCode);
                 callback(error, null);
             }
         });
