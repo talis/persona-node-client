@@ -926,6 +926,80 @@ PersonaClient.prototype.getProfileByGuid = function(opts, callback){
     });
     req.end();
 };
+
+/**
+ * Get all profiles for an array of GUIDs.
+ *
+ * TODO Neither the client lib nor Persona impose restriction on amount of GUIDs requested. Limit in calling app for now.
+ *
+ * @param  {object}   opts     [description]
+ * @param  {array}    opts.guids  Array of GUIDs to fetch profiles for
+ * @param  {string}   opts.token  Auth token
+ * @param  {string}   opts.xRequestId Optional request ID to pass through in logging.
+ * @param  {Function} callback
+ */
+PersonaClient.prototype.getProfilesForGuids = function getProfilesForGuids(opts, callback) {
+    validateOpts(opts,{ guids: _.isArray, token: _.isString });
+    var log = this.log.bind(this);
+    var guids = opts.guids;
+    var token = opts.token;
+    var xRequestId = opts.xRequestId || uuid.v4();
+    var _this = this;
+
+    var ids = guids.join(',');
+
+    var options = {
+        hostname: _this.config.persona_host,
+        port: _this.config.persona_port,
+        path: '/users?guids=' + ids,
+        method: 'GET',
+        headers: {
+        'Authorization': 'Bearer ' + token,
+        'User-Agent': _this.userAgent,
+        'X-Request-Id': xRequestId
+        }
+    };
+
+    var personaReq = _this.http.request(options, function personaReq(personaResp) {
+        var userString = '';
+
+        personaResp.on('data', function onData(chunk) {
+            userString += chunk;
+        });
+
+        personaResp.on('end', function onEnd() {
+            if (personaResp.statusCode === 200) {
+                var data = JSON.parse(userString);
+                var results = [];
+                if (!_.isEmpty(data)) {
+                    if (_.isArray(data)) {
+                        results = data;
+                    } else {
+                        results.push(data);
+                    }
+                }
+                callback(null, results);
+            } else {
+                var error = new Error();
+                var statusCode = personaResp.statusCode || 0;
+                error.http_code = statusCode;
+                log('error', 'getProfilesForGuids failed with status code ' + statusCode);
+                callback(error, null);
+            }
+        });
+    });
+
+    personaReq.on('error', function (err) {
+        callback(err, null);
+    });
+
+    personaReq.on('clientError', function (err) {
+        callback(err, null);
+    });
+
+    personaReq.end();
+};
+
 /**
  * Removes any tokens that are cached for the given id and secret
  * @param id
@@ -1177,4 +1251,3 @@ exports.errorTypes = ERROR_TYPES;
 exports.createClient = function (appUA,config) {
     return new PersonaClient(appUA,config);
 };
-
