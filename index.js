@@ -937,8 +937,8 @@ PersonaClient.prototype.getProfileByGuid = function(opts, callback){
  * @param  {string}   opts.xRequestId Optional request ID to pass through in logging.
  * @param  {Function} callback
  */
-PersonaClient.prototype.getProfilesForGuids = function(opts, callback) {
-    validateOpts(opts,{guids: _.isArray,token: _.isString});
+PersonaClient.prototype.getProfilesForGuids = function getProfilesForGuids(opts, callback) {
+    validateOpts(opts,{ guids: _.isArray, token: _.isString });
     var guids = opts.guids;
     var token = opts.token;
     var xRequestId = opts.xRequestId || uuid.v4();
@@ -953,7 +953,7 @@ PersonaClient.prototype.getProfilesForGuids = function(opts, callback) {
     var personaParallelLimit = 10;
 
     // loop through passed guids and build an array of guids that will be used to query persona
-    guids.forEach(function (guid) {
+    guids.forEach(function eachGuid(guid) {
         guidList.push(guid);
         // if we've collected personaQueryLimit guids in the current guidList array, push it onto the guidListArray and
         // reset for next lot
@@ -969,7 +969,7 @@ PersonaClient.prototype.getProfilesForGuids = function(opts, callback) {
     var parallelFNs = [];
     // for each of the "blocks" of users we want to hydrate, create a parallel function and add it to
     // an array. Each of these functions will call Persona with a block of the users to hydrate...
-    guidListArray.forEach(function (guidList) {
+    guidListArray.forEach(function eachGuidList(guidList) {
         var ids = '';
         // generate a comma-sep list of user's from the list of users we need to process
         guidList.forEach(function (guid) {
@@ -980,7 +980,7 @@ PersonaClient.prototype.getProfilesForGuids = function(opts, callback) {
                 hostname: _this.config.persona_host,
                 port: _this.config.persona_port,
                 path: '/users?guids=' + ids,
-                method: "GET",
+                method: 'GET',
                 headers: {
                     'Authorization': 'Bearer ' + token,
                     'User-Agent': _this.userAgent,
@@ -997,11 +997,11 @@ PersonaClient.prototype.getProfilesForGuids = function(opts, callback) {
                         var data = JSON.parse(userString);
                         var results = [];
                         if (!_.isEmpty(data)) {
-                            if (_.isArray(data)) {
+                            if (_.isArray(data)) {
                                 results = data;
-                            } else {
-                                results.push(data);
-                            }
+                            } else {
+                                results.push(data);
+                            }
                         }
                         cb(null, results);
                     } else {
@@ -1011,12 +1011,10 @@ PersonaClient.prototype.getProfilesForGuids = function(opts, callback) {
                     }
                 });
             });
-            personaReq.on('error', function onError(err) {
-                cb(err, null);
-            });
-            personaReq.on('clientError', function onClientError(err) {
-                cb(err, null);
-            });
+
+            personaReq.on('error', cb);
+            personaReq.on('clientError', cb);
+
             personaReq.end();
         });
     });
