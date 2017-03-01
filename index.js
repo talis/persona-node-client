@@ -942,10 +942,16 @@ PersonaClient.prototype.getProfilesForGuids = function(opts, callback) {
     var guids = opts.guids;
     var token = opts.token;
     var xRequestId = opts.xRequestId || uuid.v4();
-    var personaQueryLimit = 25;
     var _this = this;
     var guidList = [];
     var guidListArray = [];
+
+    // How many profiles to query in a single call to Persona (limits the length of the URL - how long are we happy with here?)
+    var personaQueryLimit = 25;
+
+    // How many Persona queries to execute in parallel at once...
+    var personaParallelLimit = 10;
+
     // loop through passed guids and build an array of guids that will be used to query persona
     guids.forEach(function (guid) {
         guidList.push(guid);
@@ -1014,8 +1020,8 @@ PersonaClient.prototype.getProfilesForGuids = function(opts, callback) {
             personaReq.end();
         });
     });
-    // execute the functions in parallel - so all calls will be made to persona in parallel
-    async.parallel(parallelFNs, function (err, userArrays) {
+    // execute the functions in parallel - so all calls will be made to persona in parallel (up to personaParallelLimit at a time)
+    async.parallelLimit(parallelFNs, personaParallelLimit, function (err, userArrays) {
         if (err) {
             var errMess = 'getProfilesForGuids problem: ' + err;
             _this.error(errMess);
