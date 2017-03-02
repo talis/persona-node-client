@@ -954,9 +954,9 @@ PersonaClient.prototype.getProfilesForGuids = function getProfilesForGuids(opts,
         path: '/users?guids=' + ids,
         method: 'GET',
         headers: {
-        'Authorization': 'Bearer ' + token,
-        'User-Agent': _this.userAgent,
-        'X-Request-Id': xRequestId
+            'Authorization': 'Bearer ' + token,
+            'User-Agent': _this.userAgent,
+            'X-Request-Id': xRequestId
         }
     };
 
