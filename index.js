@@ -274,7 +274,7 @@ PersonaClient.prototype.validateToken = function (opts, next) {
     }
 
     var headScopeThenVerify = function headScope(scope, callback, decodedToken) {
-        var scopes = scope == 'su' ? 'su' : 'su,' + scope;
+        var scopes = scope === 'su' ? 'su' : 'su,' + scope;
         var log = this.log.bind(this);
 
         log("debug", "Verifying token against scope " + scope + " via Persona");
