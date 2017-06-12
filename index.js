@@ -275,12 +275,13 @@ PersonaClient.prototype.validateToken = function (opts, next) {
 
     var headScopeThenVerify = function headScope(scope, callback, decodedToken) {
         var log = this.log.bind(this);
+        var scopes = 'su,' + scope;
         log("debug", "Verifying token against scope " + scope + " via Persona");
 
         var options = {
             hostname: this.config.persona_host,
             port: this.config.persona_port,
-            path: this.config.persona_oauth_route + token + "?scope=" + scope,
+            path: this.config.persona_oauth_route + token + "?scope=" + scopes,
             method: "HEAD",
             headers: {
                 'User-Agent': this.userAgent,
