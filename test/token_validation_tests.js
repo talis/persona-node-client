@@ -411,7 +411,6 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
             };
 
             jwt.sign(payload, privateKey, jwtSigningOptions, function(token) {
-                // First respond that the scope is insufficient then respond ok for su
                 nock("http://persona").head(/\/oauth\/tokens\/.*\?scope=su,other_scope/).reply(204);
 
                 var req = _getStubRequest(token, "other_scope");
