@@ -274,13 +274,15 @@ PersonaClient.prototype.validateToken = function (opts, next) {
     }
 
     var headScopeThenVerify = function headScope(scope, callback, decodedToken) {
+        var scopes = scope === 'su' ? 'su' : 'su,' + scope;
         var log = this.log.bind(this);
+
         log("debug", "Verifying token against scope " + scope + " via Persona");
 
         var options = {
             hostname: this.config.persona_host,
             port: this.config.persona_port,
-            path: this.config.persona_oauth_route + token + "?scope=" + scope,
+            path: this.config.persona_oauth_route + token + "?scope=" + scopes,
             method: "HEAD",
             headers: {
                 'User-Agent': this.userAgent,
@@ -297,16 +299,8 @@ PersonaClient.prototype.validateToken = function (opts, next) {
                 log("debug", "Verification of token via Persona failed");
                 return callback(ERROR_TYPES.VALIDATION_FAILURE, null, decodedToken);
             case 403:
-                if(scope === "su") {
-                    // We tried using su and can go no further
-                    log("debug", "Verification of token via Persona failed with insufficient scope");
-                    return callback(ERROR_TYPES.INSUFFICIENT_SCOPE, null, decodedToken);
-                } else {
-                    // Try again with su
-                    log("debug", "Verification of token via Persona using scope " + scope + " failed, trying su...");
-                    return headScopeThenVerify("su", callback, decodedToken);
-                }
-                break;
+                log("debug", "Verification of token via Persona failed with insufficient scope");
+                return callback(ERROR_TYPES.INSUFFICIENT_SCOPE, null, decodedToken);
             default:
                 log("error", "Error verifying token via Persona: " + response.statusCode);
                 return callback(ERROR_TYPES.COMMUNICATION_ISSUE, null, decodedToken);

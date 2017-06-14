@@ -372,7 +372,7 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
 
             jwt.sign(payload, privateKey, jwtSigningOptions, function(token) {
                 // We can't replay the recorded response as the token in that request will expire
-                nock("http://persona").head(/\/oauth\/tokens\/.*\?scope=fatuser/).reply(204);
+                nock("http://persona").head(/\/oauth\/tokens\/.*\?scope=su,fatuser/).reply(204);
 
                 var req = _getStubRequest(token, "fatuser");
                 var res = _getStubResponse();
@@ -411,9 +411,7 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
             };
 
             jwt.sign(payload, privateKey, jwtSigningOptions, function(token) {
-                // First respond that the scope is insufficient then respond ok for su
-                nock("http://persona").head(/\/oauth\/tokens\/.*\?scope=other_scope/).reply(403);
-                nock("http://persona").head(/\/oauth\/tokens\/.*\?scope=su/).reply(204);
+                nock("http://persona").head(/\/oauth\/tokens\/.*\?scope=su,other_scope/).reply(204);
 
                 var req = _getStubRequest(token, "other_scope");
                 var res = _getStubResponse();
@@ -453,8 +451,7 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
 
             jwt.sign(payload, privateKey, jwtSigningOptions, function(token) {
                 // We can't replay the recorded response as the token in that request will expire
-                nock("http://persona").head(/\/oauth\/tokens\/.*\?scope=invalid/).reply(403);
-                nock("http://persona").head(/\/oauth\/tokens\/.*\?scope=su/).reply(403);
+                nock("http://persona").head(/\/oauth\/tokens\/.*\?scope=su,invalid/).reply(403);
 
                 var req = _getStubRequest(token, "invalid");
                 var res = _getStubResponse();
@@ -497,7 +494,7 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
 
             jwt.sign(payload, privateKey, jwtSigningOptions, function(token) {
                 // We can't replay the recorded response as the token in that request will expire
-                nock("http://persona").head(/\/oauth\/tokens\/.*\?scope=fatuser/).reply(401);
+                nock("http://persona").head(/\/oauth\/tokens\/.*\?scope=su,fatuser/).reply(401);
 
                 var req = _getStubRequest(token, "fatuser");
                 var res = _getStubResponse();
@@ -539,7 +536,7 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
 
             jwt.sign(payload, privateKey, jwtSigningOptions, function(token) {
                 // We can't replay the recorded response as the token in that request will expire
-                nock("http://persona").head(/\/oauth\/tokens\/.*\?scope=fatuser/).reply(500);
+                nock("http://persona").head(/\/oauth\/tokens\/.*\?scope=su,fatuser/).reply(500);
 
                 var req = _getStubRequest(token, "fatuser");
                 var res = _getStubResponse();

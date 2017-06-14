@@ -13,7 +13,6 @@ node_js:
 sudo: false
 before_install:
   - npm cache clean
-  - npm install -g npm@latest
   - npm install -g grunt-cli
 services:
   - redis-server

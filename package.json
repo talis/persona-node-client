@@ -1,6 +1,6 @@
 {
   "name": "persona_client",
-  "version": "3.2.0",
+  "version": "3.3.0",
   "private": true,
   "main": "./index.js",
   "description": "Node Client for Persona, repsonsible for retrieving, generating, caching and validating OAuth Tokens.",
