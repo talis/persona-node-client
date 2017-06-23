@@ -177,7 +177,7 @@ var PersonaClient = function (appUA, config) {
     this.log('debug', "Persona Client Created");
 };
 
-PersonaClient.prototype._cacheGetKey = function cacheGetKey(key) {
+PersonaClient.prototype._formatCacheKey = function cacheGetKey(key) {
     return key + '_' + this.tokenCacheKeyPostfix;
 };
 
@@ -192,12 +192,12 @@ PersonaClient.prototype._getPublicKey = function getPublicKey(cb, refresh, xRequ
 
     var cachePublicKey = function cachePublicKey(publicKey) {
         log('debug', 'Caching public key for ' + this.config.cert_timeout_sec + 's');
-        var cacheKey = this._cacheGetKey(PUBLIC_KEY_CACHE_NAME);
+        var cacheKey = this._formatCacheKey(PUBLIC_KEY_CACHE_NAME);
         this.tokenCache.set(cacheKey, publicKey, this.config.cert_timeout_sec);
     }.bind(this);
 
     var getCachedPublicKey = function getCachedPublicKey(cb) {
-        var cacheKey = this._cacheGetKey(PUBLIC_KEY_CACHE_NAME);
+        var cacheKey = this._formatCacheKey(PUBLIC_KEY_CACHE_NAME);
         this.tokenCache.get(cacheKey, function getPublicKeyIfNotInCacheThenVerify(error, publicKey) {
             if (_.isString(publicKey)) {
                 log('debug', 'Using public key from cache');
@@ -572,7 +572,7 @@ PersonaClient.prototype.obtainToken = function (opts, callback) {
     var xRequestId = opts.xRequestId || uuid.v4();
 
     var _this = this;
-    var cacheKey = this._cacheGetKey(
+    var cacheKey = this._formatCacheKey(
         "obtain_token:" + crypto.createHash('md4').update(id).digest('base64')
     );
 
@@ -1023,7 +1023,7 @@ PersonaClient.prototype.getProfilesForGuids = function getProfilesForGuids(opts,
  * @private
  */
 PersonaClient.prototype._removeTokenFromCache = function (id, secret, callback) {
-    var cacheKey = this._cacheGetKey(
+    var cacheKey = this._formatCacheKey(
         "obtain_token:" + crypto.createHash('md4').update(id).digest('base64')
     );
     var _this = this;
