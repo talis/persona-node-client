@@ -656,7 +656,7 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
             };
 
             // First make sure the cache has the key
-            var cacheKey = personaClient._cacheGetKey("public_key");
+            var cacheKey = personaClient._formatCacheKey("public_key");
             personaClient.tokenCache.set(cacheKey, publicKey);
             jwt.sign(payload, privateKey, jwtSigningOptions, function(token) {
                 var req = _getStubRequest(token, null);

@@ -187,7 +187,7 @@ var PersonaClient = function (appUA, config) {
     this.log('debug', "Persona Client Created");
 };
 
-PersonaClient.prototype._formatCacheKey = function cacheGetKey(key) {
+PersonaClient.prototype._formatCacheKey = function formatCacheKey(key) {
     return key + '_' + this.tokenCacheKeyPostfix;
 };
 
