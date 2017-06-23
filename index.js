@@ -1,5 +1,6 @@
 "use strict";
 
+var crypto = require('crypto');
 var cryptojs = require("crypto-js");
 var url = require("url");
 var querystring = require("querystring");
@@ -149,11 +150,11 @@ var PersonaClient = function (appUA, config) {
     var cacheModule = new CacheServiceModule(cacheOptions);
     this.tokenCache = new CacheService({verbose: this.config.debug}, [cacheModule]);
 
-    var host = this.config.persona_scheme
-        + "://"
-        + this.config.persona_host
-        + ":"
-        + this.config.persona_port;
+    var host = this.config.persona_scheme +
+        "://" +
+        this.config.persona_host +
+        ":" +
+        this.config.persona_port;
 
     this.tokenCacheKeyPostfix = crypto
         .createHash('md4')
@@ -572,7 +573,7 @@ PersonaClient.prototype.obtainToken = function (opts, callback) {
 
     var _this = this;
     var cacheKey = this._cacheGetKey(
-        "obtain_token:" + crypto.createHash('md4').update(id).digest('base64');
+        "obtain_token:" + crypto.createHash('md4').update(id).digest('base64')
     );
 
     // try cache first
@@ -1023,7 +1024,7 @@ PersonaClient.prototype.getProfilesForGuids = function getProfilesForGuids(opts,
  */
 PersonaClient.prototype._removeTokenFromCache = function (id, secret, callback) {
     var cacheKey = this._cacheGetKey(
-        "obtain_token:" + crypto.createHash('md4').update(id).digest('base64');
+        "obtain_token:" + crypto.createHash('md4').update(id).digest('base64')
     );
     var _this = this;
 
