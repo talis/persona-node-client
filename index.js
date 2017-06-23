@@ -318,6 +318,7 @@ PersonaClient.prototype.validateToken = function (opts, next) {
             algorithms: ["RS256"]
         };
 
+        debug("using public certificate: " + publicKey);
         jwt.verify(token, publicKey, jwtConfig, function onVerify(error, decodedToken) {
             if(error) {
                 debug("Verifying token locally failed");
