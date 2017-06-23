@@ -73,9 +73,9 @@ var validateOpts = function validateOpts(opts, mandatoryKeys) {
 var hashKey = function hashKey(key) {
     return crypto
         .createHash('md4')
-        .update(id)
+        .update(key)
         .digest('base64');
-}
+};
 
 /**
  * Constructor you must pass in an appId string identifying your app, plus an optional config object with the
