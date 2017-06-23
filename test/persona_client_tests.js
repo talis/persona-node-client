@@ -45,6 +45,36 @@ describe("Persona Client Test Suite - Constructor & Token Tests", function() {
         });
     });
 
+
+    describe("- Key format tests", function() {
+        it("should postfix key", function() {
+            var firstPersonaClient = persona.createClient("test-suite", {
+                persona_host: process.env.PERSONA_TEST_HOST || "persona",
+                persona_port: process.env.PERSONA_TEST_PORT || 80,
+                persona_scheme: process.env.PERSONA_TEST_SCHEME || "http",
+                persona_oauth_route: "/oauth/tokens/",
+                enable_debug: false,
+                cert_background_refresh: false,
+            });
+
+            var secondPersonaClient = persona.createClient("test-suite", {
+                persona_host: process.env.PERSONA_TEST_HOST || "persona",
+                persona_port: process.env.PERSONA_TEST_PORT || 81,
+                persona_scheme: process.env.PERSONA_TEST_SCHEME || "http",
+                persona_oauth_route: "/oauth/tokens/",
+                enable_debug: false,
+                cert_background_refresh: false,
+            });
+
+            firstPersonaClient._formatCacheKey('id').should.not.equal(
+                secondPersonaClient._formatCacheKey('id')
+            );
+
+            firstPersonaClient._formatCacheKey('id')
+                .should.match(/^id_[A-Za-z0-9+/=]+$/);
+        })
+    });
+
     describe("- Generate token tests", function() {
         var clock;
         var oauthClient = process.env.PERSONA_TEST_OAUTH_CLIENT || "primate";
@@ -145,18 +175,6 @@ describe("Persona Client Test Suite - Constructor & Token Tests", function() {
                     });
                 });
             });
-            it("should not return a token",function(done) {
-                var personaClient = persona.createClient("test-suite",personaClientConfig);
-
-                personaClient.obtainToken({id: "primate", secret: "wrong_password"},function(err, data) {
-                    assert(err != null);
-                    err.should.be.a.String;
-                    err.should.equal("Generate token failed with status code 400");
-                    assert(data===null);
-                    done();
-                });
-            });
         });
     });
-
 });

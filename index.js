@@ -1,5 +1,6 @@
 "use strict";
 
+var crypto = require('crypto');
 var cryptojs = require("crypto-js");
 var url = require("url");
 var querystring = require("querystring");
@@ -61,6 +62,19 @@ var validateOpts = function validateOpts(opts, mandatoryKeys) {
         error.message = 'mandatoryKeys must be empty, array or object';
         throw error;
     }
+};
+
+/**
+ * Hash a key using md4 & base64 encoding. Md4 is used as the implementation
+ * in node is the fastest hashing alg supported.
+ * @param {string} key value to hash
+ * @return {string} hashed key
+ */
+var hashKey = function hashKey(key) {
+    return crypto
+        .createHash('md4')
+        .update(key)
+        .digest('base64');
 };
 
 /**
@@ -149,6 +163,14 @@ var PersonaClient = function (appUA, config) {
     var cacheModule = new CacheServiceModule(cacheOptions);
     this.tokenCache = new CacheService({verbose: this.config.debug}, [cacheModule]);
 
+    var host = this.config.persona_scheme +
+        "://" +
+        this.config.persona_host +
+        ":" +
+        this.config.persona_port;
+
+    this.tokenCacheKeyPostfix = hashKey(host);
+
     // need to instantiate this based on the configured scheme
     this.http = require(this.config.persona_scheme);
 
@@ -165,6 +187,10 @@ var PersonaClient = function (appUA, config) {
     this.log('debug', "Persona Client Created");
 };
 
+PersonaClient.prototype._formatCacheKey = function formatCacheKey(key) {
+    return key + '_' + this.tokenCacheKeyPostfix;
+};
+
 /**
  * Retrieve Persona's public key that is used to sign the JWTs.
  * @param {callback} cb function(err, publicCert)
@@ -176,11 +202,13 @@ PersonaClient.prototype._getPublicKey = function getPublicKey(cb, refresh, xRequ
 
     var cachePublicKey = function cachePublicKey(publicKey) {
         log('debug', 'Caching public key for ' + this.config.cert_timeout_sec + 's');
-        this.tokenCache.set(PUBLIC_KEY_CACHE_NAME, publicKey, this.config.cert_timeout_sec);
+        var cacheKey = this._formatCacheKey(PUBLIC_KEY_CACHE_NAME);
+        this.tokenCache.set(cacheKey, publicKey, this.config.cert_timeout_sec);
     }.bind(this);
 
     var getCachedPublicKey = function getCachedPublicKey(cb) {
-        this.tokenCache.get(PUBLIC_KEY_CACHE_NAME, function getPublicKeyIfNotInCacheThenVerify(error, publicKey) {
+        var cacheKey = this._formatCacheKey(PUBLIC_KEY_CACHE_NAME);
+        this.tokenCache.get(cacheKey, function getPublicKeyIfNotInCacheThenVerify(error, publicKey) {
             if (_.isString(publicKey)) {
                 log('debug', 'Using public key from cache');
                 return cb(publicKey);
@@ -554,7 +582,9 @@ PersonaClient.prototype.obtainToken = function (opts, callback) {
     var xRequestId = opts.xRequestId || uuid.v4();
 
     var _this = this;
-    var cacheKey = "obtain_token:" + cryptojs.HmacSHA256(id, secret);
+    var cacheKey = this._formatCacheKey(
+        "obtain_token:" + hashKey(id)
+    );
 
     // try cache first
     this.tokenCache.get(cacheKey, function (err, reply) {
@@ -1003,8 +1033,11 @@ PersonaClient.prototype.getProfilesForGuids = function getProfilesForGuids(opts,
  * @private
  */
 PersonaClient.prototype._removeTokenFromCache = function (id, secret, callback) {
-    var cacheKey = "obtain_token:" + cryptojs.HmacSHA256(id, secret),
-        _this = this;
+    var cacheKey = this._formatCacheKey(
+        "obtain_token:" + hashKey(id)
+    );
+    var _this = this;
+
     _this.tokenCache.del(cacheKey, function (err) {
         _this.debug("Deleting " + cacheKey + " and retrying obtainToken..");
         callback(err);
