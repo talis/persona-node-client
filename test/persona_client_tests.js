@@ -47,7 +47,7 @@ describe("Persona Client Test Suite - Constructor & Token Tests", function() {
 
 
     describe("- Key format tests", function() {
-        it("should postfix key", function(done) {
+        it("should postfix key", function() {
             var firstPersonaClient = persona.createClient("test-suite", {
                 persona_host: process.env.PERSONA_TEST_HOST || "persona",
                 persona_port: process.env.PERSONA_TEST_PORT || 80,
@@ -69,6 +69,9 @@ describe("Persona Client Test Suite - Constructor & Token Tests", function() {
             firstPersonaClient._formatCacheKey('id').should.not.equal(
                 secondPersonaClient._formatCacheKey('id')
             );
+
+            firstPersonaClient._formatCacheKey('id')
+                .should.match(/^id_[A-Za-z0-9+/=]+$/);
         })
     });
 
