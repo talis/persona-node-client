@@ -286,7 +286,11 @@ PersonaClient.prototype._getPublicKey = function getPublicKey(cb, refresh, xRequ
  * validating.
  */
 PersonaClient.prototype.validateToken = function (opts, next) {
-    validateOpts(opts,['token']);
+    try {
+        validateOpts(opts,['token']);
+    } catch (e) {
+        return next(ERROR_TYPES.INVALID_TOKEN, null);
+    }
     var token = opts.token;
     var scope = opts.scope;
     var xRequestId = opts.xRequestId || uuid.v4();
@@ -295,10 +299,6 @@ PersonaClient.prototype.validateToken = function (opts, next) {
         throw "No callback (next attribute) provided";
     } else if (typeof next !== "function") {
         throw "Parameter 'next' is not a function";
-    }
-
-    if (token == null) {
-        return next(ERROR_TYPES.INVALID_TOKEN, null);
     }
 
     var headScopeThenVerify = function headScope(scope, callback, decodedToken) {
@@ -440,15 +440,7 @@ PersonaClient.prototype.validateHTTPBearerToken = function validateHTTPBearerTok
         return;
     }
 
-    try {
-        this.validateToken(config, callback);
-    } catch (exception) {
-        if (exception.name === ERROR_TYPES.INVALID_ARGUMENTS) {
-            return callback(ERROR_TYPES.INVALID_TOKEN, null, null);
-        }
-
-        return callback(exception.message, null, null);
-    }
+    this.validateToken(config, callback);
 };
 
 /**
