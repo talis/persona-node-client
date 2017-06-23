@@ -145,18 +145,6 @@ describe("Persona Client Test Suite - Constructor & Token Tests", function() {
                     });
                 });
             });
-            it("should not return a token",function(done) {
-                var personaClient = persona.createClient("test-suite",personaClientConfig);
-
-                personaClient.obtainToken({id: "primate", secret: "wrong_password"},function(err, data) {
-                    assert(err != null);
-                    err.should.be.a.String;
-                    err.should.equal("Generate token failed with status code 400");
-                    assert(data===null);
-                    done();
-                });
-            });
         });
     });
-
 });
