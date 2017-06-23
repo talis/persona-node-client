@@ -65,6 +65,19 @@ var validateOpts = function validateOpts(opts, mandatoryKeys) {
 };
 
 /**
+ * Hash a key using md4 & base64 encoding. Md4 is used as the implementation
+ * in node is the fastest hashing alg supported.
+ * @param {string} key value to hash
+ * @return {string} hashed key
+ */
+var hashKey = function hashKey(key) {
+    return crypto
+        .createHash('md4')
+        .update(id)
+        .digest('base64');
+}
+
+/**
  * Constructor you must pass in an appId string identifying your app, plus an optional config object with the
  * following properties set:
  *
@@ -156,10 +169,7 @@ var PersonaClient = function (appUA, config) {
         ":" +
         this.config.persona_port;
 
-    this.tokenCacheKeyPostfix = crypto
-        .createHash('md4')
-        .update(host)
-        .digest('base64');
+    this.tokenCacheKeyPostfix = hashKey(host);
 
     // need to instantiate this based on the configured scheme
     this.http = require(this.config.persona_scheme);
@@ -573,7 +583,7 @@ PersonaClient.prototype.obtainToken = function (opts, callback) {
 
     var _this = this;
     var cacheKey = this._formatCacheKey(
-        "obtain_token:" + crypto.createHash('md4').update(id).digest('base64')
+        "obtain_token:" + hashKey(id)
     );
 
     // try cache first
@@ -1024,7 +1034,7 @@ PersonaClient.prototype.getProfilesForGuids = function getProfilesForGuids(opts,
  */
 PersonaClient.prototype._removeTokenFromCache = function (id, secret, callback) {
     var cacheKey = this._formatCacheKey(
-        "obtain_token:" + crypto.createHash('md4').update(id).digest('base64')
+        "obtain_token:" + hashKey(id)
     );
     var _this = this;
 
