@@ -289,7 +289,7 @@ PersonaClient.prototype.validateToken = function (opts, next) {
     validateOpts(opts,['token']);
     var token = opts.token;
     var xRequestId = opts.xRequestId || uuid.v4();
-    var scopes = Array.isArray(opts.scope) || opts.scope == null ? opts.scope : [opts.scope];
+    var scopes = opts.scope && _.isString(opts.scope) ? opts.scope.split(',') : opts.scope;
 
     if (Array.isArray(scopes) && scopes.indexOf('su') === -1) {
         scopes.unshift('su');
