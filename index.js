@@ -306,8 +306,12 @@ PersonaClient.prototype.validateToken = function (opts, next) {
     }
 
     var headScopeThenVerify = function headScope(callback, decodedToken) {
-        var queryParams = '?scope=' + scopes.join(',');
         var log = this.log.bind(this);
+        var queryParams = '';
+
+        if (Array.isArray(scopes)) {
+            queryParams = '?scope=' + scopes.join(',');
+        }
 
         log("debug", "Verifying token against scope " + scopes + " via Persona");
 
