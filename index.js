@@ -361,7 +361,7 @@ PersonaClient.prototype.validateToken = function (opts, next) {
                 return headScopeThenVerify(next, decodedToken);
             }
 
-            var onlyValidateToken = scopes == null
+            var onlyValidateToken = scopes == null;
             var tokensInsepection = _.intersection(decodedToken.scopes, scopes);
             var tokenHasAtLeastOneScope = tokensInsepection.length > 0;
 
