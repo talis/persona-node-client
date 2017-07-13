@@ -358,6 +358,45 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
             });
         });
 
+        it("should validate token with multiple scopes", function(done) {
+            var payload = {
+                scopes: [
+                    "super_user"
+                ]
+            };
+
+            var jwtSigningOptions = {
+                jwtid: guid(),
+                algorithm: "RS256",
+                expiresIn: "1h",
+                audience: "super_user"
+            };
+
+            jwt.sign(payload, privateKey, jwtSigningOptions, function(token) {
+                var req = _getStubRequest(token, "other_scope,super_user");
+                var res = _getStubResponse();
+
+                personaClient.validateHTTPBearerToken(req, res, function validatedToken(err, result, decodedToken) {
+                    if (err) {
+                        return done(err);
+                    }
+                    assert.equal(res._statusWasCalled, false);
+                    assert.equal(res._jsonWasCalled, false);
+                    assert.equal(res._setWasCalled, false);
+
+                    result.should.eql("ok");
+
+                    decodedToken.should.have.property("scopes");
+                    decodedToken.should.have.property("iat");
+                    decodedToken.should.have.property("exp");
+                    decodedToken.should.have.property("aud");
+                    decodedToken.should.have.property("jti");
+                    decodedToken.scopes.should.eql(["super_user"]);
+                    done();
+                });
+            });
+        });
+
         it("should validate a scoped token when the list of scopes is too many to return", function(done) {
             var payload = {
                 scopeCount: 26
@@ -375,6 +414,46 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
                 nock("http://persona").head(/\/oauth\/tokens\/.*\?scope=su,fatuser/).reply(204);
 
                 var req = _getStubRequest(token, "fatuser");
+                var res = _getStubResponse();
+
+                personaClient.validateHTTPBearerToken(req, res, function validatedToken(error, result, decodedToken) {
+                    if(error) {
+                        return done(error);
+                    }
+                    assert.equal(res._statusWasCalled, false);
+                    assert.equal(res._jsonWasCalled, false);
+                    assert.equal(res._setWasCalled, false);
+
+                    result.should.eql("ok");
+
+                    decodedToken.should.have.property("scopeCount");
+                    decodedToken.should.have.property("iat");
+                    decodedToken.should.have.property("exp");
+                    decodedToken.should.have.property("aud");
+                    decodedToken.should.have.property("jti");
+                    decodedToken.scopeCount.should.eql(26);
+                    done();
+                });
+            });
+        });
+
+        it("should validate a scoped token with multiple scopes when the list of scopes is too many to return", function(done) {
+            var payload = {
+                scopeCount: 26
+            };
+
+            var jwtSigningOptions = {
+                jwtid: guid(),
+                algorithm: "RS256",
+                expiresIn: "1h",
+                audience: "fatuser"
+            };
+
+            jwt.sign(payload, privateKey, jwtSigningOptions, function(token) {
+                // We can't replay the recorded response as the token in that request will expire
+                nock("http://persona").head(/\/oauth\/tokens\/.*\?scope=su,fatuser,thinuser/).reply(204);
+
+                var req = _getStubRequest(token, "fatuser,thinuser");
                 var res = _getStubResponse();
 
                 personaClient.validateHTTPBearerToken(req, res, function validatedToken(error, result, decodedToken) {

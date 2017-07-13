@@ -288,8 +288,12 @@ PersonaClient.prototype._getPublicKey = function getPublicKey(cb, refresh, xRequ
 PersonaClient.prototype.validateToken = function (opts, next) {
     validateOpts(opts,['token']);
     var token = opts.token;
-    var scope = opts.scope;
     var xRequestId = opts.xRequestId || uuid.v4();
+    var scopes = opts.scope && _.isString(opts.scope) ? opts.scope.split(',') : opts.scope;
+
+    if (Array.isArray(scopes) && scopes.indexOf('su') === -1) {
+        scopes.unshift('su');
+    }
 
     if (!next) {
         throw "No callback (next attribute) provided";
@@ -301,16 +305,20 @@ PersonaClient.prototype.validateToken = function (opts, next) {
         return next(ERROR_TYPES.INVALID_TOKEN, null);
     }
 
-    var headScopeThenVerify = function headScope(scope, callback, decodedToken) {
-        var scopes = scope === 'su' ? 'su' : 'su,' + scope;
+    var headScopeThenVerify = function headScope(callback, decodedToken) {
         var log = this.log.bind(this);
+        var queryParams = '';
 
-        log("debug", "Verifying token against scope " + scope + " via Persona");
+        if (Array.isArray(scopes)) {
+            queryParams = '?scope=' + scopes.join(',');
+        }
+
+        log("debug", "Verifying token against scope " + scopes + " via Persona");
 
         var options = {
             hostname: this.config.persona_host,
             port: this.config.persona_port,
-            path: this.config.persona_oauth_route + token + "?scope=" + scopes,
+            path: this.config.persona_oauth_route + token + queryParams,
             method: "HEAD",
             headers: {
                 'User-Agent': this.userAgent,
@@ -337,8 +345,7 @@ PersonaClient.prototype.validateToken = function (opts, next) {
             log("error", "Verification of token via Persona encountered an unknown error");
             return callback(error, null, decodedToken);
         }).end();
-    };
-    headScopeThenVerify = headScopeThenVerify.bind(this);
+    }.bind(this);
 
     var verifyToken = function verifyToken(publicKey) {
         var debug = this.debug.bind(this);
@@ -353,14 +360,20 @@ PersonaClient.prototype.validateToken = function (opts, next) {
                 return next(ERROR_TYPES.VALIDATION_FAILURE, null, decodedToken);
             }
 
-            if(scope && decodedToken.hasOwnProperty("scopeCount")) {
+            if(scopes && decodedToken.hasOwnProperty("scopeCount")) {
                 debug("Token has too many scopes (" + decodedToken.scopeCount + ") to put in payload, asking Persona...");
-                return headScopeThenVerify(scope, next, decodedToken);
-            } else if (scope == null || _.includes(decodedToken.scopes, "su") || _.includes(decodedToken.scopes, scope)) {
+                return headScopeThenVerify(next, decodedToken);
+            }
+
+            var onlyValidateToken = scopes == null;
+            var tokensIntersection = _.intersection(decodedToken.scopes, scopes);
+            var tokenHasAtLeastOneScope = tokensIntersection.length > 0;
+
+            if (onlyValidateToken || tokenHasAtLeastOneScope) {
                 debug("Verifying token locally passed");
                 return next(null, "ok", decodedToken);
             } else {
-                debug("Verification of token locally failed with insufficient scope (" + scope + ")");
+                debug("Verification of token locally failed with insufficient scope (" + scopes + ")");
                 return next(ERROR_TYPES.INSUFFICIENT_SCOPE, null, decodedToken);
             }
         });
