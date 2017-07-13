@@ -359,7 +359,13 @@ PersonaClient.prototype.validateToken = function (opts, next) {
             if(scopes && decodedToken.hasOwnProperty("scopeCount")) {
                 debug("Token has too many scopes (" + decodedToken.scopeCount + ") to put in payload, asking Persona...");
                 return headScopeThenVerify(next, decodedToken);
-            } else if (scopes == null || _.includes(decodedToken.scopes, "su") || _.intersection(decodedToken.scopes, scopes).length > 0) {
+            }
+
+            var onlyValidateToken = scopes == null
+            var tokensInsepection = _.intersection(decodedToken.scopes, scopes);
+            var tokenHasAtLeastOneScope = tokensInsepection.length > 0;
+
+            if (onlyValidateToken || tokenHasAtLeastOneScope) {
                 debug("Verifying token locally passed");
                 return next(null, "ok", decodedToken);
             } else {
