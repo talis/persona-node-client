@@ -362,8 +362,8 @@ PersonaClient.prototype.validateToken = function (opts, next) {
             }
 
             var onlyValidateToken = scopes == null;
-            var tokensInsepection = _.intersection(decodedToken.scopes, scopes);
-            var tokenHasAtLeastOneScope = tokensInsepection.length > 0;
+            var tokensIntersection = _.intersection(decodedToken.scopes, scopes);
+            var tokenHasAtLeastOneScope = tokensIntersection.length > 0;
 
             if (onlyValidateToken || tokenHasAtLeastOneScope) {
                 debug("Verifying token locally passed");
