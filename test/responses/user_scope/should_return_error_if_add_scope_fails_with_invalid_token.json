@@ -2,7 +2,7 @@
     {
         "scope": "http://persona:80",
         "method": "PATCH",
-        "path": "/1/clients/fdgNy6QWGmIAl7BRjEsFtk",
+        "path": "/3/clients/fdgNy6QWGmIAl7BRjEsFtk",
         "body": {
             "scope": {
                 "$add": "test_scope"

@@ -2,7 +2,7 @@
     {
         "scope": "http://persona:80",
         "method": "POST",
-        "path": "/oauth/tokens",
+        "path": "/3/oauth/tokens",
         "body": "grant_type=client_credentials",
         "status": 200,
         "response": {
@@ -29,7 +29,7 @@
     {
         "scope": "http://persona:80",
         "method": "DELETE",
-        "path": "/oauth/users/guid/authorizations/authorization_client_id",
+        "path": "/3/oauth/users/guid/authorizations/authorization_client_id",
         "body": "",
         "status": 204,
         "response": "",

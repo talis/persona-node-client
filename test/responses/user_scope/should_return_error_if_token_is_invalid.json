@@ -2,7 +2,7 @@
     {
         "scope": "http://persona:80",
         "method": "GET",
-        "path": "/1/clients/guid_does_exist",
+        "path": "/3/clients/guid_does_exist",
         "body": "",
         "status": 401,
         "response": {
