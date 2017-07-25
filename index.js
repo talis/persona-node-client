@@ -799,11 +799,11 @@ PersonaClient.prototype.deleteAuthorization = function (opts, callback) {
         if (err) {
             callback("Request authorization failed with error: "+err);
         } else {
-            var path = API_VERSION_PREFIX
-                + '/oauth/users/'
-                + guid
-                + '/authorizations/'
-                + authorizationClientId;
+            var path = API_VERSION_PREFIX +
+                '/oauth/users/' +
+                guid +
+                '/authorizations/' +
+                authorizationClientId;
 
             var options = {
                     hostname: _this.config.persona_host,
