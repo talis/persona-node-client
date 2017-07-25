@@ -2,7 +2,7 @@
     {
         "scope": "http://persona:80",
         "method": "POST",
-        "path": "/oauth/tokens",
+        "path": "/3/oauth/tokens",
         "body": "grant_type=client_credentials",
         "status": 200,
         "response": {
@@ -29,7 +29,7 @@
     {
         "scope": "http://persona:80",
         "method": "GET",
-        "path": "/users/GUID",
+        "path": "/3/users/GUID",
         "body": "",
         "status": 404,
         "response": {
