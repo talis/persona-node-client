@@ -2,7 +2,7 @@
     {
         "scope": "http://persona:80",
         "method": "GET",
-        "path": "/oauth/keys",
+        "path": "/3/oauth/keys",
         "status": 500,
         "headers": {
             "date": "Mon, 29 Feb 2016 13:51:22 GMT",

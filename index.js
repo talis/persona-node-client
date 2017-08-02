@@ -14,6 +14,8 @@ var clientVer = JSON.parse(fs.readFileSync(__dirname + '/package.json', 'utf8'))
 
 var PUBLIC_KEY_CACHE_NAME = "public_key";
 
+var API_VERSION_PREFIX = '/3';
+
 // log severities
 var DEBUG = "debug";
 var ERROR = "error";
@@ -222,7 +224,7 @@ PersonaClient.prototype._getPublicKey = function getPublicKey(cb, refresh, xRequ
         var options = {
             hostname: this.config.persona_host,
             port: this.config.persona_port,
-            path: '/oauth/keys',
+            path: API_VERSION_PREFIX + '/oauth/keys',
             method: 'GET',
             headers: {
                 'User-Agent': this.userAgent,
@@ -318,7 +320,7 @@ PersonaClient.prototype.validateToken = function (opts, next) {
         var options = {
             hostname: this.config.persona_host,
             port: this.config.persona_port,
-            path: this.config.persona_oauth_route + token + queryParams,
+            path: API_VERSION_PREFIX + this.config.persona_oauth_route + token + queryParams,
             method: "HEAD",
             headers: {
                 'User-Agent': this.userAgent,
@@ -615,7 +617,7 @@ PersonaClient.prototype.obtainToken = function (opts, callback) {
                         hostname: _this.config.persona_host,
                         port: _this.config.persona_port,
                         auth: id + ":" + secret,
-                        path: '/oauth/tokens',
+                        path: API_VERSION_PREFIX + '/oauth/tokens',
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/x-www-form-urlencoded',
@@ -730,7 +732,7 @@ PersonaClient.prototype.requestAuthorization = function (opts, callback) {
                 options = {
                     hostname: _this.config.persona_host,
                     port: _this.config.persona_port,
-                    path: '/oauth/users/' + guid + '/authorizations',
+                    path: API_VERSION_PREFIX + '/oauth/users/' + guid + '/authorizations',
                     method: 'POST',
                     headers: {
                         'Authorization': 'Bearer ' + token.access_token,
@@ -797,10 +799,16 @@ PersonaClient.prototype.deleteAuthorization = function (opts, callback) {
         if (err) {
             callback("Request authorization failed with error: "+err);
         } else {
+            var path = API_VERSION_PREFIX +
+                '/oauth/users/' +
+                guid +
+                '/authorizations/' +
+                authorizationClientId;
+
             var options = {
                     hostname: _this.config.persona_host,
                     port: _this.config.persona_port,
-                    path: '/oauth/users/' + guid + '/authorizations/' + authorizationClientId,
+                    path: path,
                     method: 'DELETE',
                     headers: {
                         'Authorization': 'Bearer ' + token.access_token,
@@ -848,7 +856,7 @@ PersonaClient.prototype.updateProfile = function(opts, callback) {
         options = {
             hostname: _this.config.persona_host,
             port: _this.config.persona_port,
-            path: '/users/' + guid + '/profile',
+            path: API_VERSION_PREFIX + '/users/' + guid + '/profile',
             method: 'PUT',
             headers: {
                 'Authorization': 'Bearer ' + token,
@@ -914,11 +922,13 @@ PersonaClient.prototype.getProfileByGuid = function(opts, callback){
     var xRequestId = opts.xRequestId || uuid.v4();
 
     var _this = this;
+    var guids = _.isArray(guid) ? guid.join(",") : guid;
+
     // Get a profile
     var options = {
         hostname: _this.config.persona_host,
         port: _this.config.persona_port,
-        path: "/users/" + (_.isArray(guid) ? guid.join(",") : guid),
+        path: API_VERSION_PREFIX + "/users/" + guids,
         method: "GET",
         headers: {
             "Authorization": "Bearer " + token,
@@ -989,7 +999,7 @@ PersonaClient.prototype.getProfilesForGuids = function getProfilesForGuids(opts,
     var options = {
         hostname: _this.config.persona_host,
         port: _this.config.persona_port,
-        path: '/users?guids=' + ids,
+        path: API_VERSION_PREFIX + '/users?guids=' + ids,
         method: 'GET',
         headers: {
             'Authorization': 'Bearer ' + token,
@@ -1074,7 +1084,7 @@ PersonaClient.prototype.getScopesForUser = function(opts, callback) {
     var options = {
             hostname: _this.config.persona_host,
             port: _this.config.persona_port,
-            path: "/1/clients/" + guid,
+            path: API_VERSION_PREFIX + "/clients/" + guid,
             method: 'GET',
             headers: {
                 Authorization: "Bearer " + token,
@@ -1157,7 +1167,7 @@ PersonaClient.prototype._applyScopeChange = function(guid, token, scopeChange, x
     var options = {
             hostname: _this.config.persona_host,
             port: _this.config.persona_port,
-            path: "/1/clients/" + guid,
+            path: API_VERSION_PREFIX + "/clients/" + guid,
             method: 'PATCH',
             json: true,
             headers: {
