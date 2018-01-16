@@ -703,8 +703,7 @@ PersonaClient.prototype.obtainToken = function (opts, callback) {
                 });
             }
         }
-    });
-
+    }.bind(this));
 };
 
 /**
