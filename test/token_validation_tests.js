@@ -762,5 +762,33 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
                 });
             });
         });
+
+        it("should validate roles", function() {
+            // scopes, required scopes
+            assert.equal(persona.validateScopes(['su'], ['su']), true);
+            assert.equal(persona.validateScopes(['su'], ['test']), true);
+            assert.equal(persona.validateScopes(['su'], ['test test2']), true);
+            assert.equal(persona.validateScopes(['test2'], ['test', 'test2']), true);
+            assert.equal(persona.validateScopes(['test2'], ['test2:foo']), false);
+            assert.equal(persona.validateScopes(['test'], ['test2', 'test1']), false);
+            assert.equal(persona.validateScopes(['test:foo'], ['test2', 'test1']), false);
+        });
+
+        it("should validate namespaces", function() {
+            assert.equal(persona.validateScopes(['su@provider'], ['test@provider']), true);
+            assert.equal(persona.validateScopes(['su@provider'], ['test1@provider', 'test2@provider']), true);
+            assert.equal(persona.validateScopes(['su@provider'], ['test1@provider:foo', 'test2@provider']), true);
+            assert.equal(persona.validateScopes(['su@provider'], ['test1@provider:foo', 'test2@Newprovider']), true);
+            assert.equal(persona.validateScopes(['namespace@role'], ['namespace@role']), true);
+            assert.equal(persona.validateScopes(['namespace:namespace@role'], ['namespace:namespace@role']), true);
+            assert.equal(persona.validateScopes(['namespace:namespace@role', 'test@provider'], ['test@provider']), true);
+            assert.equal(persona.validateScopes(['su'], ['test@provider']), true);
+            assert.equal(persona.validateScopes(['su'], ['namespace:namespace@role', 'test@provider']), true);
+            assert.equal(persona.validateScopes(['namespace1@role'], ['namespace@role']), false);
+            assert.equal(persona.validateScopes(['namespace1:namespace@role'], ['namespace@role']), false);
+            assert.equal(persona.validateScopes(['namespacey@role'], ['namespace@role']), false);
+            assert.equal(persona.validateScopes(['namespace@role'], ['namespace@role:blah']), false);
+            assert.equal(persona.validateScopes(['namespace@role:blah'], ['namespace@role']), false);
+        });
     });
 });

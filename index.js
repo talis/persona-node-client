@@ -80,6 +80,80 @@ var hashKey = function hashKey(key) {
 };
 
 /**
+ * Check if any of the required scopes can be fulfilled by given scopes.
+ *
+ * @param {array} scopes to check against.
+ * @param {array|null} required scopes
+ * @return {bool} true if at least one required scope can be validated
+ */
+function validateScopes(scopes, requiredScopes) {
+    if (requiredScopes == null || scopes.indexOf('su') > -1) {
+        return true;
+    }
+
+    for (var requiredScope of requiredScopes) {
+        for (var scope of scopes) {
+            console.log(`${scope}->${requiredScope}`);
+            if (validateScope(scope, requiredScope)) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+exports.validateScopes = validateScopes;
+
+function chunkScope(scope) {
+    var chunks = scope.split('@', 2);
+    var result = { };
+
+    if (chunks.length == 2) {
+        result.namespace = chunks[0];
+        result.role = chunks[1];
+    } else {
+        result.role = chunks[0];
+    }
+
+    return result;
+}
+
+/**
+ * Check if a scope validates a required scope. The majority of the checks can
+ * be considered to be litral string checks. There is a single edgecase where
+ * the user has a su@provider scope. This scope will override any other scope if
+ * the role either matches or is a subset with a delimiter.
+ *
+ * i.e su@provider validates su@provider:foo and su@provider
+ *
+ * @param {string} scope scope to validate the required scope.
+ * @param {string} rscope required scope to validate scope.
+ * @return {bool} true if the scope validates the required scope.
+ */
+function validateScope(scope, rscope) {
+    var requiredScope = chunkScope(rscope);
+    var scope = chunkScope(scope);
+
+    var namespaceMatch = requiredScope.namespace === scope.namespace;
+    var roleMatch = requiredScope.role === scope.role;
+    var emptyNamespace = requiredScope.namespace == null
+        && scope.namespace == null;
+
+    var roleSubset = requiredScope.role.startsWith(scope.role + ':');
+    var suOverride = scope.namespace === 'su' && (roleMatch || roleSubset);
+
+    console.log(JSON.stringify({
+        suOverride,
+        emptyNamespace,
+        namespaceMatch,
+        roleMatch,
+    }, null, true));
+
+    return suOverride || (emptyNamespace || namespaceMatch) && roleMatch;
+}
+
+/**
  * Constructor you must pass in an appId string identifying your app, plus an optional config object with the
  * following properties set:
  *
@@ -293,10 +367,6 @@ PersonaClient.prototype.validateToken = function (opts, next) {
     var xRequestId = opts.xRequestId || uuid.v4();
     var scopes = opts.scope && _.isString(opts.scope) ? opts.scope.split(',') : opts.scope;
 
-    if (Array.isArray(scopes) && scopes.indexOf('su') === -1) {
-        scopes.unshift('su');
-    }
-
     if (!next) {
         throw "No callback (next attribute) provided";
     } else if (typeof next !== "function") {
@@ -367,11 +437,7 @@ PersonaClient.prototype.validateToken = function (opts, next) {
                 return headScopeThenVerify(next, decodedToken);
             }
 
-            var onlyValidateToken = scopes == null;
-            var tokensIntersection = _.intersection(decodedToken.scopes, scopes);
-            var tokenHasAtLeastOneScope = tokensIntersection.length > 0;
-
-            if (onlyValidateToken || tokenHasAtLeastOneScope) {
+            if (validateScopes(decodedToken.scopes, scopes)) {
                 debug("Verifying token locally passed");
                 return next(null, "ok", decodedToken);
             } else {
