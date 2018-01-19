@@ -87,7 +87,6 @@ var hashKey = function hashKey(key) {
  * config.persona_host = string, defaults to "users.talis.com";
  * config.persona_port = string|integer, defaults to 443;
  * config.persona_scheme = string, defaults to "https";
- * config.persona_oauth_route = string, defaults to "/oauth/tokens/";
  * config.enable_debug : true|false
  * config.logger: <pass in a logger that has debug() and error() functions>
  * config.cache: { module: <redis|node-cache>, options: <cache-service-options> }
@@ -136,8 +135,9 @@ var PersonaClient = function (appUA, config) {
         persona_host: "users.talis.com",
         persona_port: 443,
         persona_scheme: "https",
-        persona_oauth_route: "/oauth/tokens/"
     },this.config);
+
+    this.config.persona_oauth_route = '/oauth/tokens';
 
     var CacheServiceModule;
     var cacheOptions = {};
@@ -320,7 +320,7 @@ PersonaClient.prototype.validateToken = function (opts, next) {
         var options = {
             hostname: this.config.persona_host,
             port: this.config.persona_port,
-            path: API_VERSION_PREFIX + this.config.persona_oauth_route + token + queryParams,
+            path: API_VERSION_PREFIX + this.config.persona_oauth_route + '/' + token + queryParams,
             method: "HEAD",
             headers: {
                 'User-Agent': this.userAgent,
@@ -617,7 +617,7 @@ PersonaClient.prototype.obtainToken = function (opts, callback) {
                         hostname: _this.config.persona_host,
                         port: _this.config.persona_port,
                         auth: id + ":" + secret,
-                        path: API_VERSION_PREFIX + '/oauth/tokens',
+                        path: API_VERSION_PREFIX + this.config.persona_oauth_route,
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/x-www-form-urlencoded',
@@ -703,8 +703,7 @@ PersonaClient.prototype.obtainToken = function (opts, callback) {
                 });
             }
         }
-    });
-
+    }.bind(this));
 };
 
 /**
