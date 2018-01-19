@@ -93,7 +93,6 @@ function validateScopes(scopes, requiredScopes) {
 
     for (var requiredScope of requiredScopes) {
         for (var scope of scopes) {
-            console.log(`${scope}->${requiredScope}`);
             if (validateScope(scope, requiredScope)) {
                 return true;
             }
@@ -142,13 +141,6 @@ function validateScope(scope, rscope) {
 
     var roleSubset = requiredScope.role.startsWith(scope.role + ':');
     var suOverride = scope.namespace === 'su' && (roleMatch || roleSubset);
-
-    console.log(JSON.stringify({
-        suOverride,
-        emptyNamespace,
-        namespaceMatch,
-        roleMatch,
-    }, null, true));
 
     return suOverride || (emptyNamespace || namespaceMatch) && roleMatch;
 }
