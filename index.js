@@ -80,6 +80,32 @@ var hashKey = function hashKey(key) {
 };
 
 /**
+ * Check if a scope validates a required scope. The majority of the checks can
+ * be considered to be litral string checks. There is a single edgecase where
+ * the user has a su@provider scope. This scope will override any other scope if
+ * the role either matches or is a subset with a delimiter.
+ *
+ * i.e su@provider validates su@provider:foo and su@provider
+ *
+ * @param {string} hscope scope to validate the required scope.
+ * @param {string} rscope required scope to validate scope.
+ * @return {bool} true if the scope validates the required scope.
+ */
+function validateScope(hscope, rscope) {
+    var requiredScope = chunkScope(rscope);
+    var scope = chunkScope(hscope);
+
+    var namespaceMatch = requiredScope.namespace === scope.namespace;
+    var roleMatch = requiredScope.role === scope.role;
+    var emptyNamespace = requiredScope.namespace == null && scope.namespace == null;
+
+    var roleSubset = requiredScope.role.startsWith(scope.role + ':');
+    var suOverride = scope.namespace === 'su' && (roleMatch || roleSubset);
+
+    return suOverride || (emptyNamespace || namespaceMatch) && roleMatch;
+}
+
+/**
  * Check if any of the required scopes can be fulfilled by given scopes.
  *
  * @param {array} scopes to check against.
@@ -108,7 +134,7 @@ function chunkScope(scope) {
     var chunks = scope.split('@', 2);
     var result = { };
 
-    if (chunks.length == 2) {
+    if (chunks.length === 2) {
         result.namespace = chunks[0];
         result.role = chunks[1];
     } else {
@@ -116,33 +142,6 @@ function chunkScope(scope) {
     }
 
     return result;
-}
-
-/**
- * Check if a scope validates a required scope. The majority of the checks can
- * be considered to be litral string checks. There is a single edgecase where
- * the user has a su@provider scope. This scope will override any other scope if
- * the role either matches or is a subset with a delimiter.
- *
- * i.e su@provider validates su@provider:foo and su@provider
- *
- * @param {string} scope scope to validate the required scope.
- * @param {string} rscope required scope to validate scope.
- * @return {bool} true if the scope validates the required scope.
- */
-function validateScope(scope, rscope) {
-    var requiredScope = chunkScope(rscope);
-    var scope = chunkScope(scope);
-
-    var namespaceMatch = requiredScope.namespace === scope.namespace;
-    var roleMatch = requiredScope.role === scope.role;
-    var emptyNamespace = requiredScope.namespace == null
-        && scope.namespace == null;
-
-    var roleSubset = requiredScope.role.startsWith(scope.role + ':');
-    var suOverride = scope.namespace === 'su' && (roleMatch || roleSubset);
-
-    return suOverride || (emptyNamespace || namespaceMatch) && roleMatch;
 }
 
 /**
