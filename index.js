@@ -80,6 +80,26 @@ var hashKey = function hashKey(key) {
 };
 
 /**
+ * Split the scope into it's role and namespace components
+ *
+ * @param {string} scope scope to split up
+ * @return {object} scope descriptor (namespace & role)
+ */
+function chunkScope(scope) {
+    var chunks = scope.split('@', 2);
+    var result = { };
+
+    if (chunks.length === 2) {
+        result.namespace = chunks[0];
+        result.role = chunks[1];
+    } else {
+        result.role = chunks[0];
+    }
+
+    return result;
+}
+
+/**
  * Check if a scope validates a required scope. The majority of the checks can
  * be considered to be litral string checks. There is a single edgecase where
  * the user has a su@provider scope. This scope will override any other scope if
@@ -117,8 +137,9 @@ function validateScopes(scopes, requiredScopes) {
         return true;
     }
 
-    for (var requiredScope of requiredScopes) {
-        for (var scope of scopes) {
+
+    for (var requiredScope in requiredScopes) {
+        for (var scope in scopes) {
             if (validateScope(scope, requiredScope)) {
                 return true;
             }
@@ -129,20 +150,6 @@ function validateScopes(scopes, requiredScopes) {
 }
 
 exports.validateScopes = validateScopes;
-
-function chunkScope(scope) {
-    var chunks = scope.split('@', 2);
-    var result = { };
-
-    if (chunks.length === 2) {
-        result.namespace = chunks[0];
-        result.role = chunks[1];
-    } else {
-        result.role = chunks[0];
-    }
-
-    return result;
-}
 
 /**
  * Constructor you must pass in an appId string identifying your app, plus an optional config object with the
