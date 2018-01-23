@@ -29,11 +29,11 @@ var ERROR_TYPES = {
 };
 
 if (!String.prototype.startsWith) {
-  // polyfill for <= 0.12
-  String.prototype.startsWith = function(searchString, position) {
-    position = position || 0;
-    return this.indexOf(searchString, position) === position;
-  };
+    // polyfill for <= 0.12
+    String.prototype.startsWith = function(searchString, pst) {
+        var position = pst || 0;
+        return this.indexOf(searchString, position) === position;
+    };
 }
 
 /**
