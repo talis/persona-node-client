@@ -260,6 +260,7 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
                 var res = _getStubResponse();
 
                 personaClient.validateHTTPBearerToken(req, res, function validatedToken(err, result, decodedToken) {
+                    (err != null).should.equal(true);
                     err.should.be.equal(persona.errorTypes.INSUFFICIENT_SCOPE);
                     res._statusWasCalled.should.equal(true);
                     res._jsonWasCalled.should.equal(true);
@@ -411,7 +412,7 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
 
             jwt.sign(payload, privateKey, jwtSigningOptions, function(token) {
                 // We can't replay the recorded response as the token in that request will expire
-                nock("http://persona").head(/\/oauth\/tokens\/.*\?scope=su,fatuser/).reply(204);
+                nock("http://persona").head(/\/3\/oauth\/tokens\/.*\?scope=fatuser/).reply(204);
 
                 var req = _getStubRequest(token, "fatuser");
                 var res = _getStubResponse();
@@ -451,7 +452,7 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
 
             jwt.sign(payload, privateKey, jwtSigningOptions, function(token) {
                 // We can't replay the recorded response as the token in that request will expire
-                nock("http://persona").head(/\/oauth\/tokens\/.*\?scope=su,fatuser,thinuser/).reply(204);
+                nock("http://persona").head(/\/3\/oauth\/tokens\/.*\?scope=fatuser,thinuser/).reply(204);
 
                 var req = _getStubRequest(token, "fatuser,thinuser");
                 var res = _getStubResponse();
@@ -490,7 +491,7 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
             };
 
             jwt.sign(payload, privateKey, jwtSigningOptions, function(token) {
-                nock("http://persona").head(/\/oauth\/tokens\/.*\?scope=su,other_scope/).reply(204);
+                nock("http://persona").head(/\/3\/oauth\/tokens\/.*\?scope=other_scope/).reply(204);
 
                 var req = _getStubRequest(token, "other_scope");
                 var res = _getStubResponse();
@@ -530,7 +531,7 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
 
             jwt.sign(payload, privateKey, jwtSigningOptions, function(token) {
                 // We can't replay the recorded response as the token in that request will expire
-                nock("http://persona").head(/\/oauth\/tokens\/.*\?scope=su,invalid/).reply(403);
+                nock("http://persona").head(/\/3\/oauth\/tokens\/.*\?scope=invalid/).reply(403);
 
                 var req = _getStubRequest(token, "invalid");
                 var res = _getStubResponse();
@@ -559,7 +560,6 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
         });
 
         it("should not validate a token when the server-side check returns 401", function(done) {
-
             var payload = {
                 scopeCount: 26
             };
@@ -573,7 +573,7 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
 
             jwt.sign(payload, privateKey, jwtSigningOptions, function(token) {
                 // We can't replay the recorded response as the token in that request will expire
-                nock("http://persona").head(/\/oauth\/tokens\/.*\?scope=su,fatuser/).reply(401);
+                nock("http://persona").head(/\/3\/oauth\/tokens\/.*\?scope=fatuser/).reply(401);
 
                 var req = _getStubRequest(token, "fatuser");
                 var res = _getStubResponse();
@@ -615,7 +615,7 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
 
             jwt.sign(payload, privateKey, jwtSigningOptions, function(token) {
                 // We can't replay the recorded response as the token in that request will expire
-                nock("http://persona").head(/\/oauth\/tokens\/.*\?scope=su,fatuser/).reply(500);
+                nock("http://persona").head(/\/3\/oauth\/tokens\/.*\?scope=fatuser/).reply(500);
 
                 var req = _getStubRequest(token, "fatuser");
                 var res = _getStubResponse();

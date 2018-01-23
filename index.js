@@ -138,9 +138,12 @@ function validateScopes(scopes, requiredScopes) {
     }
 
 
-    for (var requiredScope in requiredScopes) {
-        for (var scope in scopes) {
+    for (var rs in requiredScopes) {
+        var requiredScope = requiredScopes[rs];
+        for (var sc in scopes) {
+            var scope = scopes[sc];
             if (validateScope(scope, requiredScope)) {
+                console.log(scope + ' validates ' + requiredScope);
                 return true;
             }
         }
