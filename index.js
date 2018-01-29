@@ -28,14 +28,6 @@ var ERROR_TYPES = {
     INVALID_ARGUMENTS: 'invalid_arguments',
 };
 
-if (!String.prototype.startsWith) {
-    // polyfill for <= 0.12
-    String.prototype.startsWith = function(searchString, pst) {
-        var position = pst || 0;
-        return this.indexOf(searchString, position) === position;
-    };
-}
-
 /**
  * Validate method opts
  * @param opts
