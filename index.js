@@ -589,7 +589,7 @@ PersonaClient.prototype._getTokenMeta = function getTokenMeta(opts, cb) {
 
     var req = this.http.request(options, function tokenMetaRequest(resp) {
         if (resp.statusCode !== 200) {
-            var msg = 'unsuccessful token hydration: status ' + resp.statusCode;
+            var msg = 'unsuccessful token metadata retrieval: status ' + resp.statusCode;
             this.error(msg);
             cb(new Error(msg));
             return;
