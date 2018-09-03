@@ -537,10 +537,9 @@ PersonaClient.prototype.validateHTTPBearerToken = function validateHTTPBearerTok
 /**
  * List all scopes that belong to the given token
  * @param token JWT token
- * @return list of scopes
+ * @param cb error and a list of scopes
  */
 PersonaClient.prototype.listScopes = function listScopes(token, cb) {
-    // TODO: could this structure be any better? promises? async?
     this._getPublicKey(function retrievedPublicKey(err, publicKey) {
         if (err) {
             cb(err);
@@ -551,15 +550,17 @@ PersonaClient.prototype.listScopes = function listScopes(token, cb) {
             if (err) {
                 cb(err);
             } else if (decodedToken.hasOwnProperty('scopeCount')) {
-                this._getTokenMeta({token: token}, function hydrateTokenResp(err, tokenMetadata) {
+                this._getTokenMeta({token: token}, function tokenMetaResp(err, tokenMetadata) {
                     if (err) {
                         cb(err);
                     } else {
                         cb(null, tokenMetadata.scopes.split(' '));
                     }
                 });
-            } else {
+            } else if (decodedToken.hasOwnProperty('scopes')) {
                 cb(null, decodedToken.scopes);
+            } else {
+                cb(new Error('scopeCount and scopes missing from token'));
             }
         }.bind(this));
     }.bind(this));
@@ -586,7 +587,7 @@ PersonaClient.prototype._getTokenMeta = function getTokenMeta(opts, cb) {
         },
     };
 
-    var req = this.http.request(options, function hydrateTokenReponse(resp) {
+    var req = this.http.request(options, function tokenMetaRequest(resp) {
         if (resp.statusCode !== 200) {
             var msg = 'unsuccessful token hydration: status ' + resp.statusCode;
             this.error(msg);
@@ -595,11 +596,11 @@ PersonaClient.prototype._getTokenMeta = function getTokenMeta(opts, cb) {
         }
 
         var payload = '';
-        resp.on('data', function hydrateTokenChunk(chunk) {
+        resp.on('data', function tokenMetaProgress(chunk) {
             payload += chunk;
         });
 
-        resp.on('end', function hydrateTokenEnd() {
+        resp.on('end', function tokenMetaEnd() {
             var data;
 
             try {
@@ -617,8 +618,8 @@ PersonaClient.prototype._getTokenMeta = function getTokenMeta(opts, cb) {
         }.bind(this));
     }.bind(this));
 
-    req.on('error', function hydrateTokenError(e) {
-        var msg = 'Hydrating token error: ' + e.message;
+    req.on('error', function tokenMetaError(e) {
+        var msg = 'Token metadata error: ' + e.message;
         this.error(msg);
         cb(new Error(msg), null);
     }.bind(this));
