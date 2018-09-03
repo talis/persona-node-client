@@ -9,8 +9,6 @@ var leche = require("leche");
 var sinon = require("sinon");
 var withData = leche.withData;
 var _ = require("lodash");
-var _getStubRequest = require("./utils")._getStubRequest;
-var _getStubResponse = require("./utils")._getStubResponse;
 
 describe("Persona Client Test Suite - User Scope Tests", function() {
 
