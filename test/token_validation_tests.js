@@ -845,7 +845,6 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
                     });
 
                 personaClient.listScopes(token, function listedTokenScopes(err, scopes) {
-                    console.log(err);
                     assert(err == null);
                     scopes.should.eql(['standard_user', 'blah']);
                     done();
