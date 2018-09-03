@@ -250,18 +250,5 @@ describe("Persona Client Test Suite - User Scope Tests", function() {
                 });
             });
         });
-
-        describe("- List scopes within token tests", function(){
-            it("should be able to list scopes from token", function(done) {
-                var auth = {id: oauthClient, secret: oauthSecret};
-                personaClient.obtainToken(auth, function obtainedToken(err, data) {
-                    personaClient.listScopes(data.access_token, function listedScopes(err, scopes) {
-                        assert(err == null);
-                        scopes.should.eql(['su', 'primate']);
-                        done();
-                    });
-                });
-            });
-        });
     });
 });

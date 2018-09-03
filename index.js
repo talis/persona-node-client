@@ -551,11 +551,11 @@ PersonaClient.prototype.listScopes = function listScopes(token, cb) {
             if (err) {
                 cb(err);
             } else if (decodedToken.hasOwnProperty('scopeCount')) {
-                this._hydrateToken(token, function hydrateTokenResp(err, tokenMetadata) {
+                this._hydrateToken({token: token}, function hydrateTokenResp(err, tokenMetadata) {
                     if (err) {
                         cb(err);
                     } else {
-                        cb(null, tokenMetadata.scopes.split(','));
+                        cb(null, tokenMetadata.scopes.split(' '));
                     }
                 });
             } else {
