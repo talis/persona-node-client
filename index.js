@@ -551,7 +551,7 @@ PersonaClient.prototype.listScopes = function listScopes(token, cb) {
             if (err) {
                 cb(err);
             } else if (decodedToken.hasOwnProperty('scopeCount')) {
-                this._hydrateToken({token: token}, function hydrateTokenResp(err, tokenMetadata) {
+                this._getTokenMeta({token: token}, function hydrateTokenResp(err, tokenMetadata) {
                     if (err) {
                         cb(err);
                     } else {
@@ -565,8 +565,13 @@ PersonaClient.prototype.listScopes = function listScopes(token, cb) {
     }.bind(this));
 };
 
-PersonaClient.prototype._hydrateToken = function hydrateToken(opts, cb) {
-    validateOpts(opts, {'token': _.isString}); // TODO: is a token a string or object?
+/**
+ * Retrieve the metadata related to a token
+ * @param opts object token, which is mandatory & a optional xRequestId
+ * @param cb callback error and object that details the token meta
+ */
+PersonaClient.prototype._getTokenMeta = function getTokenMeta(opts, cb) {
+    validateOpts(opts, {'token': _.isString});
     var xRequestId = opts.xRequestId || uuid.v4();
 
     var options = {
@@ -607,8 +612,6 @@ PersonaClient.prototype._hydrateToken = function hydrateToken(opts, cb) {
             if (data.error) {
                 cb(data.error);
             } else {
-                // TODO: check what the format is? This might be base64 encoded
-                // or it might be a object. The cb is expecting a decoded token
                 cb(null, data);
             }
         }.bind(this));
