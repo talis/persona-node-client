@@ -836,13 +836,15 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
 
             jwt.sign(payload, privateKey, jwtSigningOptions, function signedToken(token) {
                 // mock the http call to hydrate the token
+                var respPayload ={
+                    expires: 0,
+                    access_token: token,
+                    scopes: 'standard_user blah',
+                };
+
                 nock("http://persona")
                     .get(/\/oauth\/tokens\/.+/)
-                    .reply(200, {
-                        expires: 0,
-                        access_token: token,
-                        scopes: 'standard_user blah',
-                    });
+                    .reply(200, respPayload);
 
                 personaClient.listScopes(token, function listedTokenScopes(err, scopes) {
                     assert(err == null);
