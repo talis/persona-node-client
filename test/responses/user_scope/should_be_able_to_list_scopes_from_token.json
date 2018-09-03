@@ -1,0 +1,44 @@
+[
+    {
+        "scope": "http://persona:80",
+        "method": "POST",
+        "path": "/3/oauth/tokens",
+        "body": "grant_type=client_credentials",
+        "status": 200,
+        "response": {
+            "access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJqdGkiOiIwYzcxYmI2ZTAyYmYwNzc4OWY2ZTRkM2ZkYWUxZTBiY2Q0YjY2ZWIyIiwiaWF0IjoxNTM1OTk1ODY5LCJleHAiOjE1MzYwMDE4NjksImF1ZCI6InByaW1hdGUiLCJzdWIiOiJwcmltYXRlIiwic2NvcGVzIjpbInN1IiwicHJpbWF0ZSJdfQ.uMHgvNksBs1piIiHzlyg_deidYcHABV2LH7Qv8J2JlR_tLYry1L2V5rOnUCkNcuXyNOqmlQXvMSNg0igUKRlyFOc1cMvVFcIySyFmO6Q3chHOom4zMkr8VqusSb50h7MchdunCfUFZdDsbG6I6X2Ny7TS-SN_VnUbSgOhnI3m41FKXvROf9jRBmT_uzmzfOZR11sBDe4XorAvc2uOa44Ou4b7-JYhi8ubAvjQx9M2VGo5n1ePlSlFGrKEaeaQEyhnS-GGcSCz-femEf6FXCY2_ekffNRd59Ti_97ankYj7BHYl0RcYKyum7eZ2yTDLSdvH_QENRaobmjLqb7x8QYkA",
+            "expires_in": "6000",
+            "token_type": "bearer",
+            "scope": "su primate"
+        },
+        "headers": {
+            "date": "Mon, 03 Sep 2018 17:31:09 GMT",
+            "server": "Apache/2.4.7 (Ubuntu)",
+            "x-powered-by": "Fat-Free Framework (http://fatfree.sourceforge.net)",
+            "pragma": "no-cache",
+            "cache-control": "no-store",
+            "content-length": "652",
+            "connection": "close",
+            "content-type": "application/json"
+        }
+    },
+    {
+        "scope": "http://persona:80",
+        "method": "GET",
+        "path": "/3/oauth/keys",
+        "body": "",
+        "status": 200,
+        "response": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA8QPMreYLhibcg4KDmxCh\nFJ0UH+LKPnFBJCzn26+EiEFR3JAlOEAqiD3qKO+gJbIlS7Z6qflC5T/oUAO3XTg0\nv5LcikS24YFsh5z2WoBOiRgDfdwHPswsSwfKIRdnUPRaJG6cx5A/BYEUrXXfCEu3\nMhgETM9kmHcZs07mksXpqyvObkG3gFIeyYUge6F5BaKM4izjBtZGu5eh3ipyru7S\nuaAFqhgB/9f5Q5XTBA7EQhRQzI/KPn/ERTHnJkRzZwTrnURubiughqLUIdSAaPRu\nTWWjIDpzcrkghy3tBwwJZtHwVlYbMY3lUn7wYa01AdJWZwImX4B2YMu9gqywO9S4\nDQIDAQAB\n-----END PUBLIC KEY-----\n",
+        "headers": {
+            "date": "Mon, 03 Sep 2018 17:31:09 GMT",
+            "server": "Apache/2.4.7 (Ubuntu)",
+            "x-powered-by": "Fat-Free Framework (http://fatfree.sourceforge.net)",
+            "pragma": "no-cache",
+            "cache-control": "no-cache, must-revalidate",
+            "vary": "Accept-Encoding",
+            "content-length": "451",
+            "connection": "close",
+            "content-type": "text/plain;charset=utf-8"
+        }
+    }
+]
