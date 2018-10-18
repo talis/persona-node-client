@@ -28,6 +28,10 @@ var ERROR_TYPES = {
     INVALID_ARGUMENTS: 'invalid_arguments',
 };
 
+var JWT_CONFIG = {
+    algorithms: ['RS256'],
+};
+
 /**
  * Validate method opts
  * @param opts
@@ -422,12 +426,9 @@ PersonaClient.prototype.validateToken = function (opts, next) {
 
     var verifyToken = function verifyToken(publicKey) {
         var debug = this.debug.bind(this);
-        var jwtConfig = {
-            algorithms: ["RS256"]
-        };
 
         debug("using public certificate: " + publicKey);
-        jwt.verify(token, publicKey, jwtConfig, function onVerify(error, decodedToken) {
+        jwt.verify(token, publicKey, JWT_CONFIG, function onVerify(error, decodedToken) {
             if(error) {
                 debug("Verifying token locally failed");
                 return next(ERROR_TYPES.VALIDATION_FAILURE, null, decodedToken);
@@ -531,6 +532,99 @@ PersonaClient.prototype.validateHTTPBearerToken = function validateHTTPBearerTok
 
         return callback(exception.message, null, null);
     }
+};
+
+/**
+ * List all scopes that belong to the given token
+ * @param token JWT token
+ * @param cb error and a list of scopes
+ */
+PersonaClient.prototype.listScopes = function listScopes(token, cb) {
+    this._getPublicKey(function retrievedPublicKey(err, publicKey) {
+        if (err) {
+            cb(err);
+            return;
+        }
+
+        jwt.verify(token, publicKey, JWT_CONFIG, function onVerify(err, decodedToken) {
+            if (err) {
+                cb(err);
+            } else if (decodedToken.hasOwnProperty('scopeCount')) {
+                this._getTokenMeta({token: token}, function tokenMetaResp(err, tokenMetadata) {
+                    if (err) {
+                        cb(err);
+                    } else {
+                        cb(null, tokenMetadata.scopes.split(' '));
+                    }
+                });
+            } else if (decodedToken.hasOwnProperty('scopes')) {
+                cb(null, decodedToken.scopes);
+            } else {
+                cb(new Error('scopeCount and scopes missing from token'));
+            }
+        }.bind(this));
+    }.bind(this));
+};
+
+/**
+ * Retrieve the metadata related to a token
+ * @param opts object token, which is mandatory & a optional xRequestId
+ * @param cb callback error and object that details the token meta
+ */
+PersonaClient.prototype._getTokenMeta = function getTokenMeta(opts, cb) {
+    validateOpts(opts, {'token': _.isString});
+    var xRequestId = opts.xRequestId || uuid.v4();
+
+    var options = {
+        hostname: this.config.persona_host,
+        port: this.config.persona_port,
+        path: API_VERSION_PREFIX + this.config.persona_oauth_route + '/' + opts.token,
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+            'User-Agent': this.userAgent,
+            'X-Request-Id': xRequestId,
+        },
+    };
+
+    var req = this.http.request(options, function tokenMetaRequest(resp) {
+        if (resp.statusCode !== 200) {
+            var msg = 'unsuccessful token metadata retrieval: status ' + resp.statusCode;
+            this.error(msg);
+            cb(new Error(msg));
+            return;
+        }
+
+        var payload = '';
+        resp.on('data', function tokenMetaProgress(chunk) {
+            payload += chunk;
+        });
+
+        resp.on('end', function tokenMetaEnd() {
+            var data;
+
+            try {
+                data = JSON.parse(payload);
+            } catch (e) {
+                cb('Error parsing response from persona: ' + payload);
+                return;
+            }
+
+            if (data.error) {
+                cb(data.error);
+            } else {
+                cb(null, data);
+            }
+        }.bind(this));
+    }.bind(this));
+
+    req.on('error', function tokenMetaError(e) {
+        var msg = 'Token metadata error: ' + e.message;
+        this.error(msg);
+        cb(new Error(msg), null);
+    }.bind(this));
+
+    req.end();
 };
 
 /**

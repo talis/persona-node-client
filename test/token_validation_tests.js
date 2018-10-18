@@ -186,7 +186,6 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
 
             jwt.sign(payload, privateKey, jwtSigningOptions, function(token) {
                 var req = _getStubRequest(token, null);
-                console.log(req);
                 req.header = function(key) {
                     return (key === "X-Request-Id") ? "specific-id" : null;
                 };
@@ -789,6 +788,70 @@ describe("Persona Client Test Suite - Token Validation Tests", function() {
             assert.equal(persona.validateScopes(['namespacey@role'], ['namespace@role']), false);
             assert.equal(persona.validateScopes(['namespace@role'], ['namespace@role:blah']), false);
             assert.equal(persona.validateScopes(['namespace@role:blah'], ['namespace@role']), false);
+        });
+
+        it('should be able to list all scopes on a token', function(done) {
+            var payload = {
+                scopes: [
+                    'standard_user',
+                    'blah',
+                ]
+            };
+
+            var jwtSigningOptions = {
+                jwtid: guid(),
+                algorithm: "RS256",
+                expiresIn: "1h",
+                audience: "standard_user"
+            };
+
+            // First make sure the cache has the key
+            var cacheKey = personaClient._formatCacheKey("public_key");
+            personaClient.tokenCache.set(cacheKey, publicKey);
+
+            jwt.sign(payload, privateKey, jwtSigningOptions, function signedToken(token) {
+                personaClient.listScopes(token, function listedTokenScopes(err, scopes) {
+                    assert(err == null);
+                    scopes.should.eql(['standard_user', 'blah']);
+                    done();
+                });
+            });
+        });
+
+        it('should be able to list all scopes on a token that has scopeCount', function(done) {
+            var payload = {
+                scopeCount: 2,
+            };
+
+            var jwtSigningOptions = {
+                jwtid: guid(),
+                algorithm: "RS256",
+                expiresIn: "1h",
+                audience: "standard_user"
+            };
+
+            // First make sure the cache has the key
+            var cacheKey = personaClient._formatCacheKey("public_key");
+            personaClient.tokenCache.set(cacheKey, publicKey);
+
+            jwt.sign(payload, privateKey, jwtSigningOptions, function signedToken(token) {
+                // mock the http call to hydrate the token
+                var respPayload ={
+                    expires: 0,
+                    access_token: token,
+                    scopes: 'standard_user blah',
+                };
+
+                nock("http://persona")
+                    .get(/\/oauth\/tokens\/.+/)
+                    .reply(200, respPayload);
+
+                personaClient.listScopes(token, function listedTokenScopes(err, scopes) {
+                    assert(err == null);
+                    scopes.should.eql(['standard_user', 'blah']);
+                    done();
+                });
+            });
         });
     });
 });
