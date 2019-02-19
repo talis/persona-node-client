@@ -2,10 +2,10 @@
 
 var should = require("should");
 var assert = require("assert");
-var persona = require("../index");
+var persona = require("../../index");
 var cryptojs = require("crypto-js");
-var runBeforeEach = require("./utils").beforeEach;
-var runAfterEach = require("./utils").afterEach;
+var runBeforeEach = require("../utils").beforeEach;
+var runAfterEach = require("../utils").afterEach;
 var leche = require("leche");
 var withData = leche.withData;
 
