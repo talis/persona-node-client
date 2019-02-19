@@ -6,12 +6,12 @@ var jwt = require("jsonwebtoken");
 var fs = require("fs");
 var nock = require("nock");
 var sinon = require("sinon");
-var persona = require("../index");
-var _getStubRequest = require("./utils")._getStubRequest;
-var _getStubResponse = require("./utils")._getStubResponse;
-var guid = require("./utils").guid;
-var runBeforeEach = require("./utils").beforeEach;
-var runAfterEach = require("./utils").afterEach;
+var persona = require("../../index");
+var _getStubRequest = require("../utils")._getStubRequest;
+var _getStubResponse = require("../utils")._getStubResponse;
+var guid = require("../utils").guid;
+var runBeforeEach = require("../utils").beforeEach;
+var runAfterEach = require("../utils").afterEach;
 var leche = require("leche");
 var withData = leche.withData;
 var lodash = require('lodash');
@@ -19,8 +19,8 @@ var lodash = require('lodash');
 describe("Persona Client Test Suite - Token Validation Tests", function() {
 
     var personaClient, spy;
-    var privateKey = fs.readFileSync(__dirname + "/keys/privkey.pem", "utf-8");
-    var publicKey = fs.readFileSync(__dirname + "/keys/pubkey.pem", "utf-8");
+    var privateKey = fs.readFileSync(__dirname + "/../keys/privkey.pem", "utf-8");
+    var publicKey = fs.readFileSync(__dirname + "/../keys/pubkey.pem", "utf-8");
     withData({
         "default-cache": {
             persona_host: process.env.PERSONA_TEST_HOST || "persona",

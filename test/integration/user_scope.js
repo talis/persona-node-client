@@ -2,9 +2,9 @@
 
 var should = require("should");
 var assert = require("assert");
-var persona = require("../index");
-var runBeforeEach = require("./utils").beforeEach;
-var runAfterEach = require("./utils").afterEach;
+var persona = require("../../index");
+var runBeforeEach = require("../utils").beforeEach;
+var runAfterEach = require("../utils").afterEach;
 var leche = require("leche");
 var sinon = require("sinon");
 var withData = leche.withData;

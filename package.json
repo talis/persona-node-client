@@ -24,6 +24,7 @@
     "coverage": "nyc npm run test",
     "coverage-html": "nyc --reporter=html npm run test",
     "test": "./node_modules/.bin/mocha --exit --timeout 20000 test/**/*.js",
+    "integration-test": "./node_modules/.bin/mocha --exit --timeout 20000 test/integration/**/*.js",
     "lint": "./node_modules/.bin/jshint index.js",
     "lint-fix": "./node_modules/.bin/js-beautify -r index.js"
   },
