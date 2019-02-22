@@ -590,15 +590,17 @@ describe('public-key-store', function() {
                     });
                 });
 
-                publicKeyStore.obtainToken(personaClient, testOpts, (err) => {
+                publicKeyStore.obtainToken(personaClient, testOpts, (err, publicKey) => {
                     personaClient.tokenCache.get.calledOnce.should.equal(true);
 
                     personaClient.tokenCache.get.calledWith(testObtainTokenCacheKey).should.equal(true);
 
-                    generateTokenStub.called.should.equal(false);
+                    generateTokenStub.calledOnce.should.equal(true);
 
-                    err.should.equal(error);
+                    generateTokenStub.calledWith(personaClient, testObtainTokenCacheKey, testXRequestId, testOpts.id, testOpts.secret).should.equal(true);
 
+                    publicKey.access_token.should.equal(testPublicKeyObject.access_token);
+                    publicKey.expires_at.should.equal(testUnexpiredTimestamp);
                     done();
                 });
             });
