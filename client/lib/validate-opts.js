@@ -33,7 +33,7 @@ var validateOpts = function validateOpts(opts, mandatoryKeys) {
                 throw error;
             }
         });
-    } else {
+    } else if(mandatoryKeys) {
         error.message = 'mandatoryKeys must be empty, array or object';
         throw error;
     }

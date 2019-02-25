@@ -11,6 +11,7 @@ var clientVer = require('../package.json').version || 'unknown';
 var hashKey = require('./lib/hash-key');
 var validateOpts = require('./lib/validate-opts');
 var validateScopes = require('./lib/validate-scopes');
+var publicKeyStore = require('./lib/public-key-store');
 
 var ERROR_TYPES = require('./lib/error-types');
 
@@ -68,6 +69,8 @@ var PersonaClient = function (appUA, config) {
             throw new Error("Cert config timeout could not be parsed as integer");
         }
     }
+
+    this.apiVersionPrefix = API_VERSION_PREFIX;
 
     // now set refresh interval ms to be equal or just under cert timeout sec
     this.pk_auto_refresh_timeout_ms = (this.config.cert_timeout_sec > 10) ? (this.config.cert_timeout_sec - 10) * 1000 : this.config.cert_timeout_sec * 1000;
@@ -148,80 +151,9 @@ PersonaClient.prototype._formatCacheKey = function formatCacheKey(key) {
  * @private
  */
 PersonaClient.prototype._getPublicKey = function getPublicKey(cb, refresh, xRequestId) {
-    var log = this.log.bind(this);
+    var cacheKey = this._formatCacheKey(PUBLIC_KEY_CACHE_NAME);
 
-    var cachePublicKey = function cachePublicKey(publicKey) {
-        log('debug', 'Caching public key for ' + this.config.cert_timeout_sec + 's');
-        var cacheKey = this._formatCacheKey(PUBLIC_KEY_CACHE_NAME);
-        this.tokenCache.set(cacheKey, publicKey, this.config.cert_timeout_sec);
-    }.bind(this);
-
-    var getCachedPublicKey = function getCachedPublicKey(cb) {
-        var cacheKey = this._formatCacheKey(PUBLIC_KEY_CACHE_NAME);
-        this.tokenCache.get(cacheKey, function getPublicKeyIfNotInCacheThenVerify(error, publicKey) {
-            if (_.isString(publicKey)) {
-                log('debug', 'Using public key from cache');
-                return cb(publicKey);
-            }
-
-            return cb(null);
-        });
-    }.bind(this);
-
-    var getRemotePublicKey = function getRemotePublicKey(cb) {
-        var options = {
-            hostname: this.config.persona_host,
-            port: this.config.persona_port,
-            path: API_VERSION_PREFIX + '/oauth/keys',
-            method: 'GET',
-            headers: {
-                'User-Agent': this.userAgent,
-                'X-Request-Id': xRequestId || uuid.v4()
-            }
-        };
-
-        log('debug', 'Fetching public key from Persona');
-        this.http.request(options, function onResponse(response) {
-            var publicKey = '';
-
-            if (response.statusCode !== 200) {
-                log('error', 'Error fetching public key from Persona: ' + response.statusCode);
-                return cb(ERROR_TYPES.COMMUNICATION_ISSUE, null);
-            }
-
-            response.on('data', function onData(chunk) {
-                publicKey += chunk;
-            });
-
-            response.on('end', function onEnd() {
-                cachePublicKey(publicKey);
-                return cb(null, publicKey);
-            });
-        }).on('error', function onError(error) {
-            log('error', 'Fetching public key from Persona encountered an unknown error');
-            return cb(error, null);
-        }).end();
-    }.bind(this);
-
-    if (refresh === true) {
-        getRemotePublicKey(function retrievedPublicKey(err, publicKey) {
-            if (err) {
-                return cb(err, null);
-            }
-
-            return cb(null, publicKey);
-        });
-    } else {
-        getCachedPublicKey(function retrieveKey(publicKey) {
-            if (publicKey) {
-                return cb(null, publicKey);
-            }
-
-            getRemotePublicKey(function retrievedPublicKey(err, updatedPublicKey) {
-                return cb(err, updatedPublicKey);
-            });
-        });
-    }
+    publicKeyStore.get(this, cacheKey, refresh, xRequestId, cb);
 };
 
 /**
@@ -626,122 +558,7 @@ PersonaClient.prototype.isPresignedUrlValid = function (presignedUrl, secret) {
  */
 PersonaClient.prototype.obtainToken = function (opts, callback) {
     validateOpts(opts, ["id", "secret"]);
-    var id = opts.id;
-    var secret = opts.secret;
-    var xRequestId = opts.xRequestId || uuid.v4();
-
-    var _this = this;
-    var cacheKey = this._formatCacheKey(
-        "obtain_token:" + hashKey(id)
-    );
-
-    // try cache first
-    this.tokenCache.get(cacheKey, function (err, reply) {
-        if (err) {
-            callback(err, null);
-        } else {
-            if (reply == null) {
-                _this.debug("Did not find token in cache for key " + cacheKey + ", obtaining from server");
-                // obtain directly from persona
-                var form_data = {
-                        'grant_type': 'client_credentials'
-                    },
-                    post_data = querystring.stringify(form_data),
-                    options = {
-                        hostname: _this.config.persona_host,
-                        port: _this.config.persona_port,
-                        auth: id + ":" + secret,
-                        path: API_VERSION_PREFIX + this.config.persona_oauth_route,
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/x-www-form-urlencoded',
-                            'Content-Length': post_data.length,
-                            'User-Agent': _this.userAgent,
-                            'X-Request-Id': xRequestId
-                        }
-                    };
-                var req = _this.http.request(options, function (resp) {
-                    var str = "";
-                    if (resp.statusCode === 200) {
-
-                        resp.on("data", function (chunk) {
-                            str += chunk;
-                        });
-                        resp.on("end", function () {
-                            var data;
-                            try {
-                                data = JSON.parse(str);
-                            } catch (e) {
-                                callback("Error parsing response from persona: " + str, null);
-                                return;
-                            }
-                            if (data.error) {
-                                callback(data.error, null);
-                            } else if (data.access_token) {
-                                // cache token
-                                var cacheFor = data.expires_in - 60, // cache for token validity minus 60s
-                                    now = (new Date().getTime() / 1000);
-                                data.expires_at = now + data.expires_in;
-                                if (cacheFor > 0) {
-                                    _this.tokenCache.set(cacheKey, JSON.stringify(data), cacheFor);
-                                    callback(null, data);
-                                } else {
-                                    callback(null, data);
-                                }
-                            } else {
-                                callback("Could not get access token", null);
-                            }
-                        });
-                    } else {
-                        var err = "Generate token failed with status code " + resp.statusCode;
-                        _this.error(err);
-                        callback(err, null);
-                    }
-                });
-                req.on("error", function (e) {
-                    var err = "OAuth::generateToken problem: " + e.message;
-                    _this.error(err);
-                    callback(err, null);
-                });
-                req.write(post_data);
-                req.end();
-            } else {
-                var data;
-                if (_.isObject(reply)) {
-                    data = reply;
-                    reply = JSON.stringify(data);
-                } else {
-                    data = JSON.parse(reply);
-                }
-                _this.debug("Found cached token for key " + cacheKey + ": " + reply);
-
-                if (data.access_token) {
-                    // recalc expires_in
-                    var now = new Date().getTime() / 1000;
-                    var expiresIn = data.expires_at - now;
-                    _this.debug("New expires_in is " + expiresIn);
-                    if (expiresIn > 0) {
-                        data.expires_in = expiresIn;
-                        callback(null, data);
-                        return;
-                    }
-                }
-                // either expiresIn<=0, or malformed data, remove from redis and retry
-                _this._removeTokenFromCache(id, secret, function (err) {
-                    if (err) {
-                        callback(err, null);
-                    } else {
-                        // iterate
-                        _this.obtainToken({
-                            id: id,
-                            secret: secret,
-                            xRequestId: xRequestId
-                        }, callback);
-                    }
-                });
-            }
-        }
-    }.bind(this));
+    publicKeyStore.obtainToken(this, opts, callback);
 };
 
 /**

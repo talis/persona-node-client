@@ -1,6 +1,6 @@
 {
   "name": "persona_client",
-  "version": "4.1.4",
+  "version": "4.1.5",
   "private": true,
   "main": "./index.js",
   "description": "Node Client for Persona, repsonsible for retrieving, generating, caching and validating OAuth Tokens.",
@@ -25,19 +25,21 @@
     "coverage-html": "nyc --reporter=html npm run test",
     "test": "./node_modules/.bin/mocha --exit --timeout 20000 test/**/*.js",
     "integration-test": "./node_modules/.bin/mocha --exit --timeout 20000 test/integration/**/*.js",
+    "unit-test": "./node_modules/.bin/mocha --exit --timeout 20000 test/unit/**/*.js",
     "lint": "./node_modules/.bin/jshint index.js",
     "lint-fix": "./node_modules/.bin/js-beautify -r index.js"
   },
   "devDependencies": {
     "debug": "2.6.8",
     "js-beautify": "^1.8.9",
-    "jshint": "2.1.11",
-    "should": "3.3.2",
+    "jshint": "^2.10.1",
     "leche": "2.2.3",
     "mocha": "5.2.0",
-    "sinon": "1.12.1",
     "nock": "7.2.2",
-    "nyc": "^13.1.0"
+    "nyc": "^13.1.0",
+    "proxyquire": "^2.1.0",
+    "should": "3.3.2",
+    "sinon": "3.0.0"
   },
   "dependencies": {
     "cache-service": "1.3.5",
