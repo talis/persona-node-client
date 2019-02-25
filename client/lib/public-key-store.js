@@ -54,11 +54,6 @@ function obtainToken(client, opts, callback) {
 
     // try cache first
     client.tokenCache.get(cacheKey, function (err, reply) {
-        if (err) {
-            callback(err);
-            return;
-        }
-
         if (reply) {
             var data;
             if (_.isObject(reply)) {
