@@ -10,14 +10,7 @@ Install the module by adding the following line to `packages.json`:
     "persona_client": "git://github.com/talis/persona-node-client.git#1.3.0"
 ```
 
-Create a persona client as follows. the only required param is the user agent of your calling app/script:
-
-```javascript
-var persona = require('persona_client');
-var personaClient = persona.createClient('myapp/0.0.1');
-```
-
-optionally, you can pass some configuration in a second parameter:
+Create a persona client as follows:
 
 ```javascript
 var persona = require('persona_client');
