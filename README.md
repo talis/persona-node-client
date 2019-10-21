@@ -24,12 +24,12 @@ var persona = require('persona_client');
 var personaClient = persona.createClient('myapp/0.0.1',{
  persona_host: "users.talis.com",
  persona_port = 443,
- persona_scheme = 'https';
+ persona_scheme = 'https',
  persona_oauth_route = '/oauth/tokens/',
  enable_debug : true,
  logger: myCustomAppLoggerInstance,
  cache: cacheConfig, // see Caching OAuth tokens below...
- cert_background_refresh: 'true' // refresh the public cert from persona
+ cert_background_refresh: 'true', // refresh the public cert from persona
  cert_timeout_sec: '600' // the timeout after which the obtained cert should not be used
 });
 ```
